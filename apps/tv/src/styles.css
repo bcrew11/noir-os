@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+@import '@noir/ui/tokens.css';
+
+@source '../../../packages/ui/src';
+
+/* Layout is authored for a 1920×1080 canvas in rem (1rem = 16px at 1080p) and scales
+   uniformly: 4K gets 32px rems, a 1280×720 panel gets ~10.7px rems. */
+html {
+  font-size: min(calc(100vw / 120), calc(100vh / 67.5));
+  background: var(--color-ink-900);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+}
+body { margin: 0; overflow: hidden; }
+#root { position: fixed; inset: 0; }
+
+/* Hide scrollbars on the TV while keeping programmatic scrolling. */
+.scroll-hidden { scrollbar-width: none; }
+.scroll-hidden::-webkit-scrollbar { display: none; }
+
+/* -------------------------- background motion -------------------------- */
+@keyframes drift-a { from { transform: translate3d(-1.2%, 0.6%, 0) scale(1.03); } to { transform: translate3d(1.4%, -0.8%, 0) scale(1.06); } }
+@keyframes drift-b { from { transform: translate3d(1%, 0, 0) scale(1.02); } to { transform: translate3d(-1.6%, 1%, 0) scale(1.05); } }
+@keyframes drift-c { from { transform: translate3d(0, 0.8%, 0); } to { transform: translate3d(-2%, -0.6%, 0); } }
+@keyframes glow-breathe { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+@keyframes aurora-flow { from { transform: translate3d(-8%, 0, 0) rotate(-4deg) scaleY(1); } to { transform: translate3d(8%, -3%, 0) rotate(3deg) scaleY(1.15); } }
+@keyframes kenburns { from { transform: scale(1.04) translate3d(0, 0, 0); } to { transform: scale(1.14) translate3d(-2%, -1.5%, 0); } }
+
+.bg-layer { position: absolute; inset: -4%; will-change: transform; }
+.anim-a { animation: drift-a 60s ease-in-out infinite alternate; }
+.anim-b { animation: drift-b 85s ease-in-out infinite alternate; }
+.anim-c { animation: drift-c 110s ease-in-out infinite alternate; }
+.anim-glow { animation: glow-breathe 14s ease-in-out infinite; }
+.anim-aurora { animation: aurora-flow 38s ease-in-out infinite alternate; }
+
+.parallax {
+  transform: translate3d(calc(var(--focus-x, 0) * -0.9rem), calc(var(--focus-y, 0) * -0.5rem), 0);
+  transition: transform 1.6s var(--ease-noir);
+}
+
+/* Reduced / no motion and low-performance hardware: freeze ambient movement. */
+html[data-motion='reduced'] .anim-a, html[data-motion='reduced'] .anim-b, html[data-motion='reduced'] .anim-c,
+html[data-motion='reduced'] .anim-glow, html[data-motion='reduced'] .anim-aurora,
+html[data-motion='off'] *, html.low-perf .anim-a, html.low-perf .anim-b, html.low-perf .anim-c, html.low-perf .anim-aurora {
+  animation: none !important;
+}
+html[data-motion='off'] .parallax, html[data-motion='reduced'] .parallax, html.low-perf .parallax { transform: none; transition: none; }
+html[data-motion='off'] * { transition: none !important; }
+
+/* Film grain to keep gradients from banding on TV panels. */
+.grain {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Focus glow shared by cards and buttons. */
+.focus-ring {
+  box-shadow:
+    0 0 0 0.125rem color-mix(in srgb, var(--noir-highlight) 85%, white),
+    0 0 1.6rem 0.2rem color-mix(in srgb, var(--noir-accent) 55%, transparent),
+    0 1.6rem 3rem -1rem rgba(0, 0, 0, 0.8);
+}

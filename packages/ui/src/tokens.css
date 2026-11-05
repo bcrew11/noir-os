@@ -1,0 +1,64 @@
+/* NOIR design tokens — shared by the TV dashboard and phone companion.
+   Import after `@import "tailwindcss";` in each app's stylesheet. */
+
+@theme {
+  --color-ink-950: #07060c;
+  --color-ink-900: #0b0912; /* primary background */
+  --color-ink-800: #151120; /* secondary background */
+  --color-ink-700: #211b2e; /* surface */
+  --color-ink-600: #2c2440;
+  --color-glass: rgba(35, 27, 48, 0.65);
+  --color-glass-strong: rgba(44, 34, 62, 0.82);
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-line-strong: rgba(255, 255, 255, 0.18);
+  --color-fg: #f8f7fc;
+  --color-fg-muted: #a9a3ba;
+  --color-fg-dim: #77708a;
+
+  /* Accent colors are runtime-themable (Settings → Appearance). */
+  --color-primary: var(--noir-primary, #8b5cf6);
+  --color-accent: var(--noir-accent, #a855f7);
+  --color-highlight: var(--noir-highlight, #c084fc);
+
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-condensed: 'Oswald', 'Arial Narrow', sans-serif;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+  --font-wide: 'Archivo Variable', 'Archivo', sans-serif;
+  --font-rounded: 'Nunito Variable', 'Nunito', sans-serif;
+
+  --radius-card: 1.5rem;
+  --radius-panel: 1.75rem;
+
+  --ease-noir: cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+
+:root {
+  --noir-primary: #8b5cf6;
+  --noir-accent: #a855f7;
+  --noir-highlight: #c084fc;
+  color-scheme: dark;
+}
+
+@layer components {
+  /* Translucent surface. Blur is dropped automatically in low-performance mode. */
+  .glass {
+    background: linear-gradient(180deg, rgba(48, 38, 66, 0.55), rgba(26, 20, 38, 0.62));
+    border: 1px solid var(--color-line);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 1.25rem 3rem -1.5rem rgba(0, 0, 0, 0.7);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
+  }
+  .no-glass .glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: linear-gradient(180deg, rgba(40, 32, 56, 0.96), rgba(24, 19, 34, 0.97));
+  }
+  .text-gradient {
+    background: linear-gradient(100deg, #ffffff 0%, #ece6fb 45%, var(--noir-highlight) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
