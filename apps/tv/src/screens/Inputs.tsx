@@ -18,7 +18,7 @@ function InputCard({ id, label, sublabel, icon, active, onSelect, onLongSelect }
   const t = focusTransition(useMotion());
   const Icon = INPUT_ICON[icon];
   return (
-    <motion.div ref={ref} {...pointer} role="button" aria-label={`${label} (${id})`} animate={{ scale: focused ? 1.05 : 1, y: focused ? -6 : 0 }} transition={t}
+    <motion.div ref={ref} {...pointer} data-focused={focused || undefined} role="button" aria-label={`${label} (${id})`} animate={{ scale: focused ? 1.05 : 1, y: focused ? -6 : 0 }} transition={t}
       className={cx('glass relative flex h-64 cursor-pointer flex-col justify-between rounded-[1.75rem] p-7 transition-[background,box-shadow]', focused && 'bg-white/10 focus-ring')}>
       <div className="flex items-start justify-between">
         <div className={cx('grid size-20 place-items-center rounded-2xl border', active ? 'border-highlight/40 bg-primary/25' : 'border-line bg-white/[0.05]')}>

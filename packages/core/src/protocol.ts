@@ -97,4 +97,6 @@ export type ServerMessage =
   | { type: 'toast'; toast: Toast }
   | { type: 'phonePairing'; request: { code: string; expiresAt: number; deviceName: string } | null }
   | { type: 'tvPairing'; stage: 'idle' | 'awaiting-pin' | 'paired' | 'error'; message?: string }
+  /** Android TV mode: ask the dashboard (which runs on the device) to open an app natively. */
+  | { type: 'launchOnDisplay'; appId: string }
   | { type: 'pong' };

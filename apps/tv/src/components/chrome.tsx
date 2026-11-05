@@ -57,7 +57,7 @@ export function Header() {
           {clock.time}{clock.suffix && <span className="ml-1.5">{clock.suffix}</span>}
         </span>
         <span className="h-9 w-px bg-line-strong" />
-        <motion.button ref={gear.ref} {...gear.pointer} tabIndex={-1} aria-label="Settings" animate={{ scale: gear.focused ? 1.12 : 1, rotate: gear.focused ? 30 : 0 }} transition={t}
+        <motion.button ref={gear.ref} {...gear.pointer} data-focused={gear.focused || undefined} tabIndex={-1} aria-label="Settings" animate={{ scale: gear.focused ? 1.12 : 1, rotate: gear.focused ? 30 : 0 }} transition={t}
           className={cx('grid size-13 place-items-center rounded-full transition-colors', gear.focused ? 'bg-white/14 focus-ring text-fg' : 'text-fg/90')}>
           <Settings className="size-8" strokeWidth={1.6} />
         </motion.button>
@@ -94,7 +94,7 @@ function NavItem({ item, active }: { item: (typeof NAV)[number]; active: boolean
   const level = useMotion();
   const Icon = item.icon;
   return (
-    <button ref={ref} {...pointer} tabIndex={-1} aria-current={active ? 'page' : undefined}
+    <button ref={ref} {...pointer} data-focused={focused || undefined} tabIndex={-1} aria-current={active ? 'page' : undefined}
       className={cx('relative flex h-14 items-center gap-3 rounded-full px-6 text-[1.2rem] font-medium outline-none transition-colors duration-200',
         active || focused ? 'text-fg' : 'text-fg-muted')}>
       {active && (

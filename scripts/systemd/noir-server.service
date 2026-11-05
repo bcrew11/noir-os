@@ -1,0 +1,17 @@
+# NOIR server — edit User and WorkingDirectory, then: sudo systemctl enable --now noir-server
+[Unit]
+Description=NOIR OS server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=noir
+WorkingDirectory=/home/noir/noir-os
+EnvironmentFile=-/etc/noir.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

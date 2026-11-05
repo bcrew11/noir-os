@@ -12,7 +12,7 @@ import { useUI } from '../store/ui.ts';
 function DeviceChip({ device }: { device: PlaybackDevice }) {
   const { ref, focused, pointer } = useFocusable<HTMLButtonElement>(`dev-${device.id}`, { group: 'devices', onSelect: () => void command({ type: 'music.transfer', deviceId: device.id }) });
   return (
-    <button ref={ref} {...pointer} tabIndex={-1} className={cx('flex h-12 items-center gap-2.5 rounded-full border px-5 text-[1.05rem] transition',
+    <button ref={ref} {...pointer} data-focused={focused || undefined} tabIndex={-1} className={cx('flex h-12 items-center gap-2.5 rounded-full border px-5 text-[1.05rem] transition',
       device.active ? 'border-highlight/40 bg-primary/25 text-fg' : 'border-line bg-white/[0.04] text-fg-muted', focused && 'focus-ring bg-white/12 text-fg')}>
       <Speaker className="size-5" strokeWidth={1.7} />{device.name}
     </button>

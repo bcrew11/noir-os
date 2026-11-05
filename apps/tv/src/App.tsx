@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { applyAccent, command, connect, useNoir } from '@noir/ui';
+import { applyAccent, command, connect, onLaunchOnDisplay, useNoir } from '@noir/ui';
+import { allApps, launchApp } from './lib/apps.ts';
 import { Background } from './components/Background.tsx';
 import { Header, NavBar, NoirMark, Toasts } from './components/chrome.tsx';
 import { PhonePairingOverlay } from './components/PhonePairingOverlay.tsx';
@@ -36,7 +37,11 @@ export function App() {
       if (e.key === '`' || (e.key === 'r' && e.shiftKey)) useUI.setState((s) => ({ remoteSimulator: !s.remoteSimulator }));
     };
     window.addEventListener('keydown', onKey);
-    return () => { off(); window.removeEventListener('keydown', onKey); };
+    const offLaunch = onLaunchOnDisplay((appId) => {
+      const app = allApps(useNoir.getState().state).find((a) => a.id === appId);
+      if (app) void launchApp(app);
+    });
+    return () => { off(); offLaunch(); window.removeEventListener('keydown', onKey); };
   }, []);
 
   const a = state?.settings.appearance;

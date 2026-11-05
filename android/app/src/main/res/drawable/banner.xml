@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 320x180 TV banner: dark field with the NOIR mark -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape><solid android:color="#0B0912" /><size android:width="320dp" android:height="180dp" /></shape></item>
+    <item android:gravity="center" android:width="22dp" android:height="96dp">
+        <rotate android:fromDegrees="32" android:toDegrees="32" android:pivotX="50%" android:pivotY="50%">
+            <shape><corners android:radius="11dp" /><gradient android:angle="90" android:startColor="#8B5CF6" android:endColor="#C084FC" /></shape>
+        </rotate>
+    </item>
+</layer-list>

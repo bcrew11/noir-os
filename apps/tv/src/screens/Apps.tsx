@@ -17,7 +17,7 @@ type Filter = 'all' | 'home' | AppCategory;
 function Chip({ id, label, active, onSelect }: { id: string; label: string; active: boolean; onSelect: () => void }) {
   const { ref, focused, pointer } = useFocusable<HTMLButtonElement>(id, { group: 'chips', onSelect });
   return (
-    <button ref={ref} {...pointer} tabIndex={-1}
+    <button ref={ref} {...pointer} data-focused={focused || undefined} tabIndex={-1}
       className={cx('h-12 shrink-0 rounded-full px-5 text-[1.1rem] font-medium transition-[background,color,box-shadow] duration-200',
         active ? 'bg-primary/35 text-fg border border-highlight/40' : 'border border-line bg-white/[0.04] text-fg-muted',
         focused && 'focus-ring text-fg bg-white/12')}>
@@ -34,7 +34,7 @@ export default function Apps() {
   const [options, setOptions] = useState<AppDefinition | null>(null);
   useScreenFocus('apps', 'chip-all');
 
-  const favorites = state?.settings.home.favorites ?? [];
+  const favorites = useMemo(() => state?.settings.home.favorites ?? [], [state?.settings.home.favorites]);
   const apps = useMemo(() => {
     let list = searchApps(query, allApps(state));
     if (filter === 'home') list = favorites.map((id) => list.find((a) => a.id === id)).filter((a): a is AppDefinition => !!a);
@@ -67,7 +67,7 @@ export default function Apps() {
                     badge={onHome ? <span className="grid size-8 place-items-center rounded-full bg-highlight/90 text-ink-900"><Check className="size-5" strokeWidth={2.6} /></span> : undefined} />
                   <div className="flex items-center justify-between px-1">
                     <span className="truncate text-[1.15rem] text-fg/90">{app.name}</span>
-                    <Pill tone={r === 'verified' || r === 'ready' ? 'ok' : r === 'demo' ? 'demo' : 'neutral'}>{READINESS_LABEL[r]}</Pill>
+                    <Pill tone={r === 'verified' || r === 'ready' || r === 'installed' ? 'ok' : r === 'demo' ? 'demo' : 'neutral'}>{READINESS_LABEL[r]}</Pill>
                   </div>
                 </div>
               );

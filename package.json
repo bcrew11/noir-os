@@ -11,7 +11,7 @@
     "dev": "concurrently -n server,tv,phone -c magenta,cyan,green \"npm:dev -w @noir/server\" \"npm:dev -w @noir/tv\" \"npm:dev -w @noir/phone\"",
     "build": "npm run build -w @noir/tv && npm run build -w @noir/phone",
     "start": "npm run start -w @noir/server",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -p packages/core --noEmit && tsc -p packages/tv-adapters --noEmit && tsc -p packages/integrations --noEmit && tsc -p packages/ui --noEmit && tsc -p apps/server --noEmit && tsc -p apps/tv --noEmit && tsc -p apps/phone --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test --trace off",

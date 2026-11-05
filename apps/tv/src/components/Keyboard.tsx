@@ -8,7 +8,7 @@ const NUMERIC = ['123', '456', '789', '.0'];
 function Key({ id, label, onPress, wide, icon: Icon }: { id: string; label: string; onPress: () => void; wide?: boolean; icon?: typeof Delete }) {
   const { ref, focused, pointer } = useFocusable<HTMLButtonElement>(id, { onSelect: onPress, group: 'kbd' });
   return (
-    <button ref={ref} {...pointer} tabIndex={-1} aria-label={label}
+    <button ref={ref} {...pointer} data-focused={focused || undefined} tabIndex={-1} aria-label={label}
       className={cx('grid h-14 place-items-center rounded-xl text-[1.4rem] font-medium transition-[background,transform] duration-150',
         wide ? 'col-span-2' : '', focused ? 'scale-110 bg-highlight text-ink-900 shadow-[0_0_1.2rem_var(--noir-accent)]' : 'bg-white/[0.07] text-fg')}>
       {Icon ? <Icon className="size-6" /> : label}

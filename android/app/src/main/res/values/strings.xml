@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">NOIR</string>
+    <!-- Default NOIR server; change on first run (hold BACK for 2s on the setup screen) -->
+    <string name="default_server">http://noir.local:8787/</string>
+</resources>

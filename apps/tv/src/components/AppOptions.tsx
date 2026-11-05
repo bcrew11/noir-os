@@ -24,7 +24,9 @@ export function AppOptions({ app, onClose }: { app: AppDefinition; onClose: () =
   };
 
   const explain =
-    readiness === 'demo' ? 'Demo mode: opening this app is simulated. Pair your TV to launch it for real.'
+    readiness === 'installed' ? 'Installed on this device — NOIR opens it directly.'
+    : readiness === 'not-installed' ? 'Not installed on this device. Install it from Google Play, then it will open from NOIR.'
+    : readiness === 'demo' ? 'Demo mode: opening this app is simulated. Pair your TV to launch it for real.'
     : readiness === 'no-tv' ? 'No television is paired, so NOIR can’t open this app yet.'
     : readiness === 'needs-setup' ? `Open ${app.name} once with your TV remote, then choose “Learn from TV” so NOIR can open it next time.`
     : launch?.source === 'catalog' ? 'Using VIZIO’s published app directory. If it doesn’t open, use “Learn from TV”.'
@@ -33,7 +35,7 @@ export function AppOptions({ app, onClose }: { app: AppDefinition; onClose: () =
   return (
     <Dialog title={app.name} subtitle={app.description} onClose={onClose}>
       <div className="mb-5 flex items-start gap-3">
-        <Pill tone={readiness === 'verified' || readiness === 'ready' ? 'ok' : readiness === 'demo' ? 'demo' : 'warn'}>{READINESS_LABEL[readiness]}</Pill>
+        <Pill tone={readiness === 'verified' || readiness === 'ready' || readiness === 'installed' ? 'ok' : readiness === 'demo' ? 'demo' : 'warn'}>{READINESS_LABEL[readiness]}</Pill>
         <p className="flex-1 text-[1.05rem] leading-snug text-fg-muted">{explain}</p>
       </div>
       <div className="flex flex-col gap-2.5">

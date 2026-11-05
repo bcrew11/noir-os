@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+@import '@noir/ui/tokens.css';
+
+@source '../../../packages/ui/src';
+
+html {
+  background: var(--color-ink-900);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(90% 50% at 100% 0%, color-mix(in srgb, var(--noir-accent) 22%, transparent), transparent 70%),
+    radial-gradient(70% 40% at 0% 100%, color-mix(in srgb, var(--noir-primary) 14%, transparent), transparent 70%),
+    var(--color-ink-900);
+  background-attachment: fixed;
+}
+button { -webkit-user-select: none; user-select: none; touch-action: manipulation; }

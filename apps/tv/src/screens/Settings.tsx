@@ -31,7 +31,7 @@ function SectionItem({ s, active }: { s: (typeof SECTIONS)[number]; active: bool
   useEffect(() => { if (focused) useUI.setState({ settingsSection: s.id }); }, [focused, s.id]);
   const Icon = s.icon;
   return (
-    <button ref={ref} {...pointer} tabIndex={-1}
+    <button ref={ref} {...pointer} data-focused={focused || undefined} tabIndex={-1}
       className={cx('flex h-16 w-full items-center gap-4 rounded-2xl px-5 text-left text-[1.3rem] font-medium transition-[background,color,box-shadow] duration-200',
         focused ? 'bg-white/12 text-fg focus-ring' : active ? 'bg-primary/20 text-fg' : 'text-fg-muted')}>
       <Icon className={cx('size-6', active || focused ? 'text-highlight' : '')} strokeWidth={1.7} />{s.label}

@@ -35,6 +35,13 @@ export function setStoredToken(token: string | null) {
   } catch { /* storage unavailable */ }
 }
 
+type LaunchListener = (appId: string) => void;
+const launchListeners = new Set<LaunchListener>();
+export function onLaunchOnDisplay(fn: LaunchListener) {
+  launchListeners.add(fn);
+  return () => launchListeners.delete(fn);
+}
+
 type NavListener = (key: NavKey) => void;
 const navListeners = new Set<NavListener>();
 export function onRemoteNav(fn: NavListener) {
@@ -120,6 +127,9 @@ function handle(msg: ServerMessage) {
       break;
     case 'nav':
       navListeners.forEach((fn) => fn(msg.key));
+      break;
+    case 'launchOnDisplay':
+      launchListeners.forEach((fn) => fn(msg.appId));
       break;
     case 'toast':
       pushToast(msg.toast);

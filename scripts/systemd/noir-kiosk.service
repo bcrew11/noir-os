@@ -1,0 +1,14 @@
+# NOIR full-screen display (user service, needs a graphical session):
+#   systemctl --user enable --now noir-kiosk
+[Unit]
+Description=NOIR kiosk display
+After=graphical-session.target
+
+[Service]
+ExecStartPre=/bin/sh -c 'until curl -sf http://127.0.0.1:8787/api/health; do sleep 1; done'
+ExecStart=/usr/bin/chromium --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --autoplay-policy=no-user-gesture-required --check-for-update-interval=31536000 http://127.0.0.1:8787/
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

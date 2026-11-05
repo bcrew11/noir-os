@@ -92,7 +92,7 @@ export async function buildServer(cfg: ServerConfig, deps: { store?: Store; logg
 
   /* ------------------------------ auth -------------------------------- */
   function isLocal(req: FastifyRequest) {
-    const remote = req.socket.remoteAddress ?? '';
+    const remote = req.ip ?? req.socket?.remoteAddress ?? '';
     const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',')[0]?.trim();
     return LOOPBACK.has(remote) && (!fwd || LOOPBACK.has(fwd));
   }
@@ -116,8 +116,8 @@ export async function buildServer(cfg: ServerConfig, deps: { store?: Store; logg
 
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof ZodError) return reply.code(400).send({ message: 'Invalid request', issues: err.issues });
-    const status = (err as { statusCode?: number }).statusCode ?? 500;
-    return reply.code(status).send({ message: err.message });
+    const e = err as Error & { statusCode?: number };
+    return reply.code(e.statusCode ?? 500).send({ message: e.message });
   });
 
   /* ----------------------------- realtime ------------------------------ */
@@ -352,7 +352,16 @@ export async function buildServer(cfg: ServerConfig, deps: { store?: Store; logg
       case 'tv.power': return tv.power(cmd.on);
       case 'tv.input': return tv.input(cmd.inputId);
       case 'tv.returnToNoir': return tv.returnToNoir();
-      case 'app.launch': return tv.launch(cmd.appId);
+      case 'app.launch': {
+        // In Android TV mode the app lives on the NOIR device itself; the dashboard there opens it.
+        if (cfg.deployment === 'android-tv') {
+          const screens = [...clients].filter((c) => c.authorized && c.role === 'tv');
+          if (!screens.length) return { status: 'failed', message: 'The NOIR launcher isn’t connected right now.' };
+          broadcast({ type: 'launchOnDisplay', appId: cmd.appId }, (c) => c.role === 'tv');
+          return { status: 'sent', message: 'Asked the NOIR launcher to open the app.' };
+        }
+        return tv.launch(cmd.appId);
+      }
       case 'music.playpause': return music.playPause();
       case 'music.next': return music.next();
       case 'music.previous': return music.previous();

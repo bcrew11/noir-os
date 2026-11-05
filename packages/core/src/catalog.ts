@@ -53,11 +53,18 @@ export interface AppDefinition {
   webUrl?: string;
   /** Lowercase strings matched against VIZIO's reported app names when learning/looking up configs. */
   aliases?: string[];
+  /**
+   * Candidate Android TV package names, used only by the NOIR Android TV launcher. They are
+   * checked against the device's package manager at runtime (installed apps are also matched by
+   * name), so an app is only shown as launchable when it is actually installed.
+   */
+  androidPackages?: string[];
 }
 
 export const APP_CATALOG: AppDefinition[] = [
   {
     id: 'youtube-tv',
+    androidPackages: ['com.google.android.youtube.tvunplugged'],
     name: 'YouTube TV',
     category: 'live-tv',
     description: 'Live TV from 100+ channels',
@@ -67,6 +74,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'youtube',
+    androidPackages: ['com.google.android.youtube.tv'],
     name: 'YouTube',
     category: 'streaming',
     description: 'Videos, creators and music',
@@ -76,6 +84,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'espn',
+    androidPackages: ['com.espn.score_center', 'com.espn.gtv'],
     name: 'ESPN',
     category: 'sports',
     description: 'Live sports, scores and highlights',
@@ -85,6 +94,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'netflix',
+    androidPackages: ['com.netflix.ninja'],
     name: 'Netflix',
     category: 'streaming',
     description: 'Series, films and originals',
@@ -94,6 +104,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'disney-plus',
+    androidPackages: ['com.disney.disneyplus'],
     name: 'Disney+',
     category: 'streaming',
     description: 'Disney, Pixar, Marvel, Star Wars',
@@ -103,6 +114,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'hulu',
+    androidPackages: ['com.hulu.livingroomplus'],
     name: 'Hulu',
     category: 'streaming',
     description: 'Current TV and Hulu originals',
@@ -112,6 +124,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'prime-video',
+    androidPackages: ['com.amazon.amazonvideo.livingroom'],
     name: 'Prime Video',
     category: 'streaming',
     description: 'Amazon originals and rentals',
@@ -121,6 +134,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'max',
+    androidPackages: ['com.wbd.stream', 'com.hbo.hbonow'],
     name: 'Max',
     category: 'streaming',
     description: 'HBO, Max originals and more',
@@ -130,6 +144,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'peacock',
+    androidPackages: ['com.peacocktv.peacockandroid'],
     name: 'Peacock',
     category: 'streaming',
     description: 'NBC, sports and originals',
@@ -139,6 +154,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'paramount-plus',
+    androidPackages: ['com.cbs.ott'],
     name: 'Paramount+',
     category: 'streaming',
     description: 'CBS, live sports and originals',
@@ -148,6 +164,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'apple-tv',
+    androidPackages: ['com.apple.atve.androidtv.appletv'],
     name: 'Apple TV',
     category: 'streaming',
     description: 'Apple TV+ originals',
@@ -157,6 +174,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'spotify',
+    androidPackages: ['com.spotify.tv.android'],
     name: 'Spotify',
     category: 'music',
     description: 'Music and podcasts',
@@ -166,6 +184,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'plex',
+    androidPackages: ['com.plexapp.android'],
     name: 'Plex',
     category: 'entertainment',
     description: 'Your personal media library',
@@ -175,6 +194,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'pluto-tv',
+    androidPackages: ['tv.pluto.android'],
     name: 'Pluto TV',
     category: 'live-tv',
     description: 'Free live channels',
@@ -184,6 +204,7 @@ export const APP_CATALOG: AppDefinition[] = [
   },
   {
     id: 'tubi',
+    androidPackages: ['com.tubitv'],
     name: 'Tubi',
     category: 'entertainment',
     description: 'Free movies and TV',

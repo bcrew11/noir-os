@@ -27,7 +27,7 @@ export function MusicWidget() {
   const disabled = !music?.canControl;
   return (
     <div className="glass relative flex h-[8.75rem] flex-1 items-center gap-6 overflow-hidden rounded-[1.75rem] pl-6 pr-8">
-      <motion.div ref={info.ref} {...info.pointer} animate={{ scale: info.focused ? 1.03 : 1 }} transition={t}
+      <motion.div ref={info.ref} {...info.pointer} data-focused={info.focused || undefined} animate={{ scale: info.focused ? 1.03 : 1 }} transition={t}
         className={cx('flex min-w-0 flex-1 cursor-pointer items-center gap-6 rounded-2xl p-2 -m-2 transition-colors', info.focused && 'bg-white/8 focus-ring')}>
         <Artwork url={track?.artUrl} className="size-[6.2rem] rounded-2xl" />
         <div className="min-w-0">
@@ -67,7 +67,7 @@ export function InputWidget() {
   const Icon = INPUT_ICON[cfg?.icon ?? 'console'];
   const label = inputId.replace('-', ' ');
   return (
-    <motion.div ref={ref} {...pointer} role="button" aria-label={`Switch to ${label}`} animate={{ scale: focused ? 1.03 : 1 }} transition={t}
+    <motion.div ref={ref} {...pointer} data-focused={focused || undefined} role="button" aria-label={`Switch to ${label}`} animate={{ scale: focused ? 1.03 : 1 }} transition={t}
       className={cx('glass relative flex h-[8.75rem] flex-1 cursor-pointer items-center gap-6 rounded-[1.75rem] pl-8 pr-9 transition-[background,box-shadow]', focused && 'bg-white/10 focus-ring')}>
       <div className="grid size-[6.2rem] shrink-0 place-items-center rounded-2xl border border-line bg-white/[0.05]">
         <Icon className="size-11 text-fg/90" strokeWidth={1.5} />

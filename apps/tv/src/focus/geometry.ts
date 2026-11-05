@@ -25,11 +25,14 @@ export function pickBest(from: Rect, candidates: Candidate[], dir: Direction): s
       case 'down': if (cy(r) <= cy(from) + 1 || r.bottom <= from.bottom - 1) continue; gap = r.top - from.bottom; break;
       case 'up': if (cy(r) >= cy(from) - 1 || r.top >= from.top + 1) continue; gap = from.top - r.bottom; break;
     }
-    gap = Math.max(0, gap);
     const overlap = horizontal
       ? Math.min(from.bottom, r.bottom) - Math.max(from.top, r.top)
       : Math.min(from.right, r.right) - Math.max(from.left, r.left);
     const perp = horizontal ? Math.abs(cy(r) - cy(from)) : Math.abs(cx(r) - cx(from));
+    // Off-row/column targets must lie entirely beyond the current element (no diagonal jumps
+    // from the end of a row into the row below).
+    if (overlap <= 0 && gap < -1) continue;
+    gap = Math.max(0, gap);
     // Elements sharing the row/column win decisively; otherwise weigh perpendicular drift heavily.
     const score = overlap > 0 ? gap + perp * 0.3 : 10_000 + gap + perp * 2;
     if (!best || score < best.score) best = { id: c.id, score };

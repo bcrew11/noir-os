@@ -20,7 +20,11 @@ const KEYMAP: Record<string, NavKey> = {
 // Vendor keyCodes: webOS back (461), Tizen back (10009), Android back (4).
 const KEYCODE_MAP: Record<number, NavKey> = { 461: 'back', 10009: 'back', 4: 'back', 179: 'playpause' };
 
-export let homeShortcut = 'h';
+let homeShortcut = 'h';
+/** Change the keyboard key that simulates the remote's Home button (default: H). */
+export function setHomeShortcut(key: string) {
+  homeShortcut = key.toLowerCase();
+}
 
 type Extra = { onPlayPause?: () => void };
 let extra: Extra = {};

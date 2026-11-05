@@ -11,11 +11,26 @@ export function useFavorites(): AppDefinition[] {
   return (state?.settings.home.favorites ?? []).map((id) => all.find((a) => a.id === id)).filter((a): a is AppDefinition => !!a);
 }
 
-export type LaunchReadiness = 'demo' | 'ready' | 'verified' | 'needs-setup' | 'no-tv' | 'web-only';
+export type LaunchReadiness = 'demo' | 'ready' | 'verified' | 'needs-setup' | 'no-tv' | 'web-only' | 'installed' | 'not-installed';
+
+/** Present when NOIR runs inside the NOIR Android TV launcher (android/). */
+interface AndroidBridge {
+  findApp(candidatesJson: string, label: string): string | null;
+  launch(pkg: string): string;
+}
+export const androidBridge = (): AndroidBridge | undefined => (globalThis as { NoirAndroid?: AndroidBridge }).NoirAndroid;
+
+function androidPackageFor(app: AppDefinition): string | null {
+  try { return androidBridge()?.findApp(JSON.stringify(app.androidPackages ?? []), app.name) ?? null; } catch { return null; }
+}
 
 /** Honest description of whether NOIR can actually open an app right now. */
 export function launchReadiness(state: NoirState | null, appId: string): LaunchReadiness {
   if (!state) return 'no-tv';
+  if (androidBridge()) {
+    const app = allApps(state).find((a) => a.id === appId);
+    return app && androidPackageFor(app) ? 'installed' : 'not-installed';
+  }
   if (state.tv.adapter === 'mock') return 'demo';
   if (state.tv.adapter === 'none') return 'no-tv';
   const l = state.launch[appId];
@@ -30,10 +45,23 @@ export const READINESS_LABEL: Record<LaunchReadiness, string> = {
   'needs-setup': 'Needs setup',
   'no-tv': 'No TV paired',
   'web-only': 'Website',
+  installed: 'Installed',
+  'not-installed': 'Not installed',
 };
 
 export async function launchApp(app: AppDefinition) {
   const state = useNoir.getState().state;
+  const bridge = androidBridge();
+  if (bridge) {
+    const pkg = androidPackageFor(app);
+    if (!pkg) {
+      pushToast({ tone: 'warning', title: `${app.name} isn’t installed on this device`, body: 'Install it from the Google Play Store on your TV device, then try again.' });
+      return;
+    }
+    const res = JSON.parse(bridge.launch(pkg)) as { ok: boolean; message: string };
+    pushToast({ tone: res.ok ? 'success' : 'error', title: res.ok ? `Opening ${app.name}` : res.message });
+    return;
+  }
   const r = launchReadiness(state, app.id);
   if (r === 'no-tv' && state?.deployment === 'browser' && app.webUrl) {
     pushToast({ tone: 'warning', title: `${app.name} can’t open on a TV yet`, body: 'No television is paired. Pair one in Settings → Devices.' });
