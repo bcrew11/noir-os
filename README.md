@@ -4,10 +4,6 @@ A cinematic, remote-first TV home screen in dark purple, built for an **onn 65â€
 television, with a phone companion app. It keeps your apps (YouTube TV, YouTube, ESPN, Netflix, Disney+),
 music, inputs and an ambient display one press away.
 
-NOIR is honest about hardware. Anything simulated carries a **Demo** badge, a command sent to the
-TV is reported as *sent* until the TV confirms it, and features the TV doesn't support are explained
-instead of faked.
-
 ## Quick start
 
 Requires Node.js **22.13+**.
