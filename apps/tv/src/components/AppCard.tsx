@@ -58,7 +58,10 @@ export function AppCard({ app, focusId, group, onSelect, onLongSelect, size = 'h
         <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'linear-gradient(160deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.02) 38%, transparent 60%)' }} />
         <motion.div aria-hidden className="pointer-events-none absolute inset-0" animate={{ opacity: focused ? 1 : 0 }} transition={t}
           style={{ background: 'radial-gradient(90% 70% at 50% 0%, rgba(255,255,255,0.12), transparent 60%)' }} />
-        <div className="relative px-4"><BrandMark app={app} logoUrl={logo} scale={size === 'hero' ? 1 : 0.9} /></div>
+        {logo?.startsWith('data:image/png')
+          // The app's own TV banner from the device: full-bleed artwork, like the system launcher.
+          ? <img src={logo} alt={app.name} draggable={false} className="absolute inset-0 size-full object-cover" />
+          : <div className="relative px-4"><BrandMark app={app} logoUrl={logo} scale={size === 'hero' ? 1 : 0.9} /></div>}
         {badge && <div className="absolute bottom-2.5 right-3">{badge}</div>}
       </div>
     </motion.div>

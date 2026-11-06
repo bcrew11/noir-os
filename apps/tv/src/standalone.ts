@@ -1,0 +1,178 @@
+/**
+ * Self-contained mode for the NOIR Android TV launcher.
+ *
+ * There is no NOIR server: settings live on the device, apps are the ones installed from
+ * Google Play (launched natively through the bridge), and the music widget controls whatever
+ * is playing on the device. TV-input control isn't used — the device opens apps itself.
+ */
+import {
+  EMPTY_MUSIC, NOIR_VERSION, NO_TV_CAPABILITIES, applySettingsPatch, defaultSettings, failed, loadSettings,
+  APP_CATALOG, type AppDefinition, type Command, type CommandResult, type MusicState, type NoirState, type Settings,
+} from '@noir/core';
+import { setLocalBackend, useNoir } from '@noir/ui';
+import { androidBridge, installedApps, type NowPlaying } from './lib/android.ts';
+import { allApps, launchApp } from './lib/apps.ts';
+
+const SETTINGS_KEY = 'noir.settings';
+
+function readSettings(): Settings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? loadSettings(JSON.parse(raw)) : standaloneDefaults();
+  } catch { return standaloneDefaults(); }
+}
+
+function standaloneDefaults(): Settings {
+  const s = defaultSettings();
+  // No TV control in this mode, so the input widget would only be noise.
+  s.home.showInputWidget = false;
+  return s;
+}
+
+function saveSettings(s: Settings) {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch { /* storage unavailable */ }
+}
+
+/** Installed apps that aren't in NOIR's catalog still appear in the library. */
+function discoverApps(): { extra: AppDefinition[]; logos: Record<string, string> } {
+  const bridge = androidBridge();
+  const installed = installedApps();
+  const logos: Record<string, string> = {};
+  const claimed = new Set<string>();
+  for (const app of APP_CATALOG) {
+    const pkg = bridge?.findApp(JSON.stringify(app.androidPackages ?? []), app.name);
+    if (!pkg) continue;
+    claimed.add(pkg);
+    const banner = bridge?.appBanner(pkg);
+    if (banner) logos[app.id] = banner;
+  }
+  const hidden = /^(com\.google\.android\.(tvlauncher|apps\.tv\.launcherx|leanbacklauncher)|com\.android\.(tv\.settings|vending)|app\.noir\.launcher)$/;
+  const extra: AppDefinition[] = installed
+    .filter((a) => !claimed.has(a.pkg) && !hidden.test(a.pkg))
+    .map((a) => ({
+      id: `android:${a.pkg}`,
+      name: a.label,
+      category: 'entertainment',
+      description: 'Installed on this device',
+      androidPackages: [a.pkg],
+      brand: { background: 'linear-gradient(160deg,#241d33,#14101d)', color: '#e9e4f5', font: 'sans', weight: 700 },
+    }));
+  for (const app of extra) {
+    const banner = bridge?.appBanner(app.androidPackages![0]!);
+    if (banner) logos[app.id] = banner;
+  }
+  return { extra, logos };
+}
+
+function musicFrom(np: NowPlaying | null): MusicState {
+  const base: MusicState = { ...EMPTY_MUSIC, provider: 'device', providerLabel: 'This device', connected: true, canControl: true, updatedAt: Date.now() };
+  if (!np) return base;
+  if (!np.permission) {
+    return { ...base, note: 'To show what’s playing, allow NOIR notification access (see Settings → Music).' };
+  }
+  if (!np.active || !np.title) return { ...base, note: 'Nothing playing. Play/pause controls the active media app.' };
+  return {
+    ...base,
+    providerLabel: np.app ?? 'Now playing',
+    isPlaying: !!np.playing,
+    track: { id: `${np.app}:${np.title}`, title: np.title, artist: np.artist ?? '', album: np.album, artUrl: np.art ?? undefined, durationMs: np.durationMs ?? 0 },
+    progressMs: np.positionMs ?? 0,
+    updatedAt: Date.now(),
+  };
+}
+
+function readNowPlaying(): NowPlaying | null {
+  try { return JSON.parse(androidBridge()?.nowPlaying() ?? 'null') as NowPlaying | null; } catch { return null; }
+}
+
+export function startStandalone() {
+  let settings = readSettings();
+  let apps = discoverApps();
+
+  const build = (): NoirState => ({
+    version: NOIR_VERSION,
+    mode: 'live',
+    deployment: 'android-tv',
+    settings,
+    tv: {
+      adapter: 'none', reachable: false, paired: false, device: null,
+      capabilities: { ...NO_TV_CAPABILITIES, appLaunch: { level: 'verified', note: 'Apps open directly on this device.' } },
+      power: 'unknown', inputs: [], currentInput: null, audio: { volume: null, muted: null }, checkedAt: Date.now(),
+    },
+    music: musicFrom(readNowPlaying()),
+    launch: {},
+    customApps: apps.extra,
+    logos: apps.logos,
+    photos: [],
+    spotify: { configured: false, connected: false },
+    weather: useNoir.getState().state?.weather ?? null,
+    phones: [],
+  });
+  const publish = () => useNoir.setState({ state: build(), status: 'online' });
+
+  const unsupported = (message: string): CommandResult => ({ status: 'unsupported', message });
+
+  setLocalBackend({
+    async command(cmd: Command): Promise<CommandResult> {
+      const bridge = androidBridge();
+      switch (cmd.type) {
+        case 'app.launch': {
+          const app = allApps(build()).find((a) => a.id === cmd.appId);
+          if (!app) return failed('Unknown app.');
+          await launchApp(app);
+          return { status: 'sent', message: `Opening ${app.name}` };
+        }
+        case 'music.playpause': case 'music.next': case 'music.previous': {
+          bridge?.mediaKey(cmd.type.slice(6));
+          setTimeout(publish, 400);
+          return { status: 'sent', message: 'Sent to the media app' };
+        }
+        default:
+          return unsupported('TV input and volume control aren’t used in this setup — use the TV remote for volume.');
+      }
+    },
+    async patchSettings(patch) {
+      settings = applySettingsPatch(settings, patch);
+      saveSettings(settings);
+      publish();
+    },
+    async api(path) {
+      if (path === '/api/tv/refresh') { apps = discoverApps(); publish(); return {}; }
+      throw new Error('Not available on this device.');
+    },
+  });
+
+  publish();
+
+  // Re-scan apps when NOIR comes back to the foreground (the user may have installed something).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { apps = discoverApps(); publish(); }
+  });
+
+  // Now-playing: poll the device's media session only while NOIR is visible.
+  const tick = () => {
+    if (document.visibilityState === 'visible') {
+      const next = musicFrom(readNowPlaying());
+      const cur = useNoir.getState().state;
+      if (cur && JSON.stringify({ ...next, updatedAt: 0, progressMs: 0 }) !== JSON.stringify({ ...cur.music, updatedAt: 0, progressMs: 0 })) {
+        useNoir.setState({ state: { ...cur, music: next } });
+      }
+    }
+    setTimeout(tick, useNoir.getState().state?.music.isPlaying ? 2000 : 5000);
+  };
+  setTimeout(tick, 2000);
+
+  // Weather straight from Open-Meteo (no key) when a location is set.
+  const weather = async () => {
+    const w = settings.weather;
+    if (w.latitude == null || w.longitude == null || !settings.ambient.showWeather) return;
+    try {
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${w.latitude}&longitude=${w.longitude}&current=temperature_2m,weather_code`);
+      const j = (await r.json()) as { current: { temperature_2m: number; weather_code: number } };
+      const cur = useNoir.getState().state;
+      if (cur) useNoir.setState({ state: { ...cur, weather: { tempC: j.current.temperature_2m, code: j.current.weather_code, updatedAt: Date.now() } } });
+    } catch { /* offline */ }
+  };
+  void weather();
+  setInterval(() => void weather(), 30 * 60_000);
+}

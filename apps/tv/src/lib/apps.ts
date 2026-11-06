@@ -1,5 +1,6 @@
 import { APP_CATALOG, type AppDefinition, type NoirState } from '@noir/core';
 import { command, pushToast, useNoir } from '@noir/ui';
+import { androidBridge } from './android.ts';
 
 export function allApps(state: NoirState | null): AppDefinition[] {
   return [...APP_CATALOG, ...(state?.customApps ?? [])];
@@ -13,15 +14,15 @@ export function useFavorites(): AppDefinition[] {
 
 export type LaunchReadiness = 'demo' | 'ready' | 'verified' | 'needs-setup' | 'no-tv' | 'web-only' | 'installed' | 'not-installed';
 
-/** Present when NOIR runs inside the NOIR Android TV launcher (android/). */
-interface AndroidBridge {
-  findApp(candidatesJson: string, label: string): string | null;
-  launch(pkg: string): string;
-}
-export const androidBridge = (): AndroidBridge | undefined => (globalThis as { NoirAndroid?: AndroidBridge }).NoirAndroid;
-
-function androidPackageFor(app: AppDefinition): string | null {
+export function androidPackageFor(app: AppDefinition): string | null {
   try { return androidBridge()?.findApp(JSON.stringify(app.androidPackages ?? []), app.name) ?? null; } catch { return null; }
+}
+
+/** Open the app's Google Play page on the device (Android TV launcher only). */
+export function openInStore(app: AppDefinition): boolean {
+  const pkg = app.androidPackages?.[0];
+  if (!pkg) return false;
+  try { return !!androidBridge()?.openStore(pkg); } catch { return false; }
 }
 
 /** Honest description of whether NOIR can actually open an app right now. */
@@ -55,7 +56,8 @@ export async function launchApp(app: AppDefinition) {
   if (bridge) {
     const pkg = androidPackageFor(app);
     if (!pkg) {
-      pushToast({ tone: 'warning', title: `${app.name} isn’t installed on this device`, body: 'Install it from the Google Play Store on your TV device, then try again.' });
+      pushToast({ tone: 'warning', title: `${app.name} isn’t installed yet`, body: 'Opening Google Play so you can install it.' });
+      openInStore(app);
       return;
     }
     const res = JSON.parse(bridge.launch(pkg)) as { ok: boolean; message: string };

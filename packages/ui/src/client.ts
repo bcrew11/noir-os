@@ -25,6 +25,22 @@ export const useNoir = create<NoirClientState>(() => ({
 
 const TOKEN_KEY = 'noir.token';
 
+/**
+ * Optional in-process backend. When NOIR runs self-contained (the Android TV launcher),
+ * there is no NOIR server: state, settings and commands are handled on the device.
+ */
+export interface LocalBackend {
+  command(cmd: Command): Promise<CommandResult>;
+  patchSettings(patch: SettingsPatch): Promise<void>;
+  api?(path: string, init: { method?: string; body?: unknown }): Promise<unknown>;
+}
+let local: LocalBackend | null = null;
+export function setLocalBackend(b: LocalBackend) {
+  local = b;
+  useNoir.setState({ status: 'online' });
+}
+export const isLocalBackend = () => local !== null;
+
 export function getStoredToken(): string | null {
   try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
 }
@@ -68,6 +84,10 @@ function headers(json = true): Record<string, string> {
 }
 
 export async function api<T = unknown>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  if (local) {
+    if (!local.api) throw new Error('Not available on this device.');
+    return (await local.api(path, init)) as T;
+  }
   const res = await fetch(path, {
     method: init.method ?? (init.body === undefined ? 'GET' : 'POST'),
     headers: headers(init.body !== undefined),
@@ -87,7 +107,7 @@ export async function api<T = unknown>(path: string, init: { method?: string; bo
 export async function command(cmd: Command, opts: { silent?: boolean } = {}): Promise<CommandResult> {
   let result: CommandResult;
   try {
-    result = await api<CommandResult>('/api/command', { body: cmd });
+    result = local ? await local.command(cmd) : await api<CommandResult>('/api/command', { body: cmd });
   } catch (e) {
     result = { status: 'failed', message: (e as Error).message };
   }
@@ -106,7 +126,8 @@ export async function patchSettings(patch: SettingsPatch) {
     useNoir.setState({ state: { ...cur, settings: mergeDeep(cur.settings, patch) } });
   }
   try {
-    await api('/api/settings', { method: 'PATCH', body: patch });
+    if (local) await local.patchSettings(patch);
+    else await api('/api/settings', { method: 'PATCH', body: patch });
   } catch (e) {
     pushToast({ tone: 'error', title: 'Could not save setting', body: (e as Error).message });
   }
@@ -144,6 +165,7 @@ function handle(msg: ServerMessage) {
 }
 
 export function connect(as: 'tv' | 'phone') {
+  if (local) return;
   role = as;
   clearTimeout(retryTimer);
   ws?.close();
@@ -166,5 +188,6 @@ export function connect(as: 'tv' | 'phone') {
 }
 
 export function send(msg: { type: 'nav'; key: NavKey } | { type: 'activity' }) {
+  if (local) return;
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
 }

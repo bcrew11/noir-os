@@ -12,3 +12,5 @@ android/local.properties
 android/.gradle
 android/build
 android/app/build
+apps/tv/dist-android
+android/app/src/main/assets/web

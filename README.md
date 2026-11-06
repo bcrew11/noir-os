@@ -40,7 +40,7 @@ See [docs/VIZIO_COMPATIBILITY.md](docs/VIZIO_COMPATIBILITY.md) for what VIZIO OS
 
 VIZIO OS can't run third-party launchers or install personal apps. The practical options, in order:
 
-1. **Android TV launcher (recommended).** Install NOIR as the home app on a Google TV / Android TV stick, over Wi-Fi with `adb`. With CEC on, turning on the TV brings up NOIR, and apps open natively. → [docs/DEPLOYMENT.md#c](docs/DEPLOYMENT.md)
+1. **Google TV launcher (recommended).** NOIR runs self-contained as the home screen of a Google TV / Android TV device. Apps come from Google Play and open natively, and no computer or server is needed. → [docs/GOOGLE_TV_SETUP.md](docs/GOOGLE_TV_SETUP.md)
 2. **External HDMI computer.** A Raspberry Pi in kiosk mode, with the TV remote working over HDMI-CEC.
 3. **Cast / AirPlay** a NOIR tab from a computer. No extra hardware, but not automatic.
 

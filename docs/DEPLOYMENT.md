@@ -8,7 +8,7 @@ Wi-Fi and serves the dashboard (`/`) and phone remote (`/phone/`).
 |---|---|---|---|---|
 | **A. Browser** (development) | Your computer | — | VIZIO API (after pairing) | No (keyboard or phone) |
 | **B. Cast / AirPlay** (fully wireless) | A computer that stays on | No | VIZIO API | No (phone remote) |
-| **C. Android TV launcher** ⭐ recommended | Google TV / Android TV stick + an always-on NOIR server | **Yes** | Android, natively | **Yes** (stick's remote) |
+| **C. Android TV launcher** ⭐ recommended | A Google TV / Android TV device (nothing else) | **Yes** | Android, natively | **Yes** (device's remote) |
 | **D. External HDMI computer** | Raspberry Pi 5 / mini PC | **Yes** | VIZIO API | Yes, via HDMI-CEC |
 
 > A native VIZIO OS app isn't one of the options. See [VIZIO_COMPATIBILITY.md](VIZIO_COMPATIBILITY.md).
@@ -53,45 +53,25 @@ trying NOIR on the big screen; not ideal as a daily setup.
 
 ## C. Android TV launcher (recommended: installed app, boots automatically)
 
-You need any Google TV or Android TV device on HDMI (an inexpensive Google TV stick or box works),
-plus the NOIR server running somewhere always on: a home computer, a Raspberry Pi, or a NAS.
+**Follow [GOOGLE_TV_SETUP.md](GOOGLE_TV_SETUP.md).** In short:
 
-1. **Server:** on the always-on machine, set `NOIR_DEPLOYMENT=android-tv` and start NOIR. Note its address, e.g. `http://192.168.1.20:8787/`. Giving it a DHCP reservation in your router helps.
-2. **Build the APK** (on a computer with Android Studio or the Android SDK and JDK 17):
-   ```bash
-   cd android && ./gradlew assembleDebug
-   ```
-   The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`.
-3. **Install wirelessly.** On the stick: *Settings → System → About* → click *Android TV OS build* 7 times to enable Developer options. Then turn on *USB debugging* (and *Wireless debugging* where offered).
-   ```bash
-   adb connect <stick-ip>:5555
-   ```
-   ```bash
-   adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-   ```
-   Accept the prompt on the TV. On Android 11+ wireless debugging, use `adb pair <ip>:<port>` with the code shown on screen first.
-4. **First run:** open NOIR from the apps row and enter the server address. Hold **Back** for 2 seconds to change it later.
-5. **Make NOIR the home screen:**
-   ```bash
-   adb shell cmd package set-home-activity app.noir.launcher/.MainActivity
-   ```
-   Some Google TV builds ignore third-party home activities. A widely used fallback, which can be reversed at any time, is to disable the stock launcher:
-   ```bash
-   adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx
-   ```
-   To undo it:
-   ```bash
-   adb shell pm enable com.google.android.apps.tv.launcherx
-   ```
-   A system update can reset this choice. NOIR also starts itself on boot (`BOOT_COMPLETED`).
-6. **On the TV:** turn on *CEC* in its settings. Powering on the TV then wakes the stick, the TV switches to it, and NOIR is the first screen. In NOIR, set *Settings → System → NOIR is connected to* to the stick's HDMI port. If the TV doesn't switch on its own, also enable *Switch to NOIR when the TV turns on* (this needs the TV paired over Wi-Fi).
+- The NOIR dashboard is **bundled inside the APK** and runs self-contained on the Google TV / Android TV device. You don't need a NOIR server or an always-on computer.
+- Apps come from Google Play and open natively. NOIR checks that each app is installed and offers its Google Play page if it isn't.
+- Tiles use each installed app's own TV banner from the device, the same artwork the system launcher shows.
+- The music widget controls whatever is playing on the device. With notification access, it also shows the track.
+- There's no TV-input control in this mode, so the Inputs screen is hidden. HDMI-CEC handles power and input.
 
-In this mode NOIR opens YouTube TV, Netflix and the rest **on the stick** through Android, and
-checks first that each app is installed. Phone shortcuts are forwarded to the launcher.
+Build the APK:
 
-**Status:** the APK **builds cleanly** (Android SDK 35, AGP 8.7, JDK 21) and the manifest shows it as
-a Leanback launcher and HOME-capable app. It has **not yet been run on a real Android TV device**.
-A prebuilt debug APK can be installed directly with `adb install`.
+```bash
+scripts/build-android.sh
+```
+
+It needs the Android SDK and JDK 17+, and writes `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+**Status:** builds cleanly. Tested in a desktop browser against a simulated Android bridge:
+launching, the Google Play fallback, media keys, now-playing and app discovery all behaved
+correctly. **Not yet run on a physical Google TV device.**
 
 ## D. External HDMI computer (Raspberry Pi 5 / mini PC)
 

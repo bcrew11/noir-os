@@ -39,7 +39,7 @@ export default function Home() {
             return (
               <AppCard key={app.id} app={app} focusId={`app-${app.id}`} group="apps"
                 onSelect={() => void launchApp(app)} onLongSelect={() => setOptions(app)}
-                badge={r === 'needs-setup' ? <Pill tone="warn">Setup</Pill> : undefined} />
+                badge={r === 'needs-setup' ? <Pill tone="warn">Setup</Pill> : r === 'not-installed' ? <Pill tone="neutral">Get</Pill> : undefined} />
             );
           })}
           <AddAppsCard focusId="home-add" group="apps" onSelect={() => go('apps')} />

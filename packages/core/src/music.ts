@@ -17,7 +17,7 @@ export interface PlaybackDevice {
 }
 
 export interface MusicState {
-  provider: 'demo' | 'spotify' | 'none';
+  provider: 'demo' | 'spotify' | 'device' | 'none';
   providerLabel: string;
   /** False when the provider is configured but not signed in / unreachable. */
   connected: boolean;

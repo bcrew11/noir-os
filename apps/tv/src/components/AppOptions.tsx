@@ -1,7 +1,7 @@
-import { ArrowLeft, ArrowRight, Crosshair, ExternalLink, GraduationCap, Minus, Play, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crosshair, Download, ExternalLink, GraduationCap, Minus, Play, Plus, Trash2 } from 'lucide-react';
 import type { AppDefinition } from '@noir/core';
 import { api, patchSettings, pushToast, useNoir } from '@noir/ui';
-import { READINESS_LABEL, launchApp, launchReadiness } from '../lib/apps.ts';
+import { READINESS_LABEL, launchApp, launchReadiness, openInStore } from '../lib/apps.ts';
 import { Dialog } from './Dialog.tsx';
 import { FRow, Pill } from './primitives.tsx';
 
@@ -39,7 +39,11 @@ export function AppOptions({ app, onClose }: { app: AppDefinition; onClose: () =
         <p className="flex-1 text-[1.05rem] leading-snug text-fg-muted">{explain}</p>
       </div>
       <div className="flex flex-col gap-2.5">
-        <FRow id="opt-open" icon={Play} title="Open" autoFocus onSelect={() => { onClose(); void launchApp(app); }} />
+        {readiness === 'not-installed' && app.androidPackages?.length ? (
+          <FRow id="opt-store" icon={Download} title="Get it on Google Play" autoFocus onSelect={() => { onClose(); openInStore(app); }} />
+        ) : (
+          <FRow id="opt-open" icon={Play} title="Open" autoFocus onSelect={() => { onClose(); void launchApp(app); }} />
+        )}
         {onHome ? (
           <>
             <FRow id="opt-left" icon={ArrowLeft} title="Move earlier" disabled={idx === 0} onSelect={() => move(-1)} value={`${idx + 1} of ${favs.length}`} />

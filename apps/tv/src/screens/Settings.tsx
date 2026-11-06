@@ -12,6 +12,7 @@ import { FButton, FRow, Pill, Toggle, cx } from '../components/primitives.tsx';
 import { useFocusable } from '../focus/focus.ts';
 import { useScreenFocus } from '../hooks/useScreenFocus.ts';
 import { widgetInput } from '../lib/apps.ts';
+import { androidBridge, installedApps, isStandalone } from '../lib/android.ts';
 import { useUI } from '../store/ui.ts';
 
 const SECTIONS = [
@@ -221,7 +222,37 @@ function PhoneLinkDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
+/** Settings → Devices when NOIR is the launcher on a Google TV / Android TV device. */
+function ThisDevice({ s }: { s: NoirState }) {
+  const count = installedApps().length;
+  return (
+    <>
+      <Group title="This device">
+        <FRow id="td-mode" icon={Tv} title="NOIR is this device’s home screen" hint="Apps open directly on this device. Install new apps from Google Play; they appear in the App Library automatically." />
+        <FRow id="td-apps" icon={Grid2x2} title="Installed apps" value={`${count}`} hint="Refresh after installing something new." onSelect={() => void api('/api/tv/refresh', { body: {} }).then(() => pushToast({ tone: 'success', title: 'App list refreshed' }))} />
+        <FRow id="td-settings" icon={Cpu} title="Android TV settings" hint="Network, accounts, display and remote setup." onSelect={() => androidBridge()?.openSystemSettings()} />
+      </Group>
+      <Group title="TV">
+        <FRow id="td-cec" icon={Power} title="Turn on with the TV" hint="On your TV, turn on CEC and set it to start on this device’s HDMI input. Then powering on the TV brings up NOIR." />
+      </Group>
+      {s.phones.length === 0 && null}
+    </>
+  );
+}
+
 function MusicSection({ s }: { s: NoirState }) {
+  if (isStandalone()) {
+    const note = s.music.note ?? '';
+    const needsAccess = /notification access/.test(note);
+    return (
+      <Group title="Media on this device">
+        <FRow id="mu-dev" icon={Music2} title="Music controls" hint="Play/pause and skip control whatever is playing on this device (Spotify, YouTube Music, …)." />
+        <FRow id="mu-access" icon={Link2} title={needsAccess ? 'Allow NOIR to see what’s playing' : 'Now-playing access granted'}
+          hint={needsAccess ? 'Opens Android’s notification access screen. If your device has none, run on a computer: adb shell cmd notification allow_listener app.noir.launcher/app.noir.launcher.MediaListener' : 'NOIR shows the current track from your media apps.'}
+          onSelect={() => { if (needsAccess && !androidBridge()?.openNotificationAccess()) pushToast({ tone: 'info', title: 'Use the adb command shown here to grant access' }); }} />
+      </Group>
+    );
+  }
   const m = s.settings.music;
   const sp = s.spotify;
   const local = ['localhost', '127.0.0.1'].includes(location.hostname);
@@ -279,14 +310,15 @@ function SystemSection({ s }: { s: NoirState }) {
   const sys = s.settings.system;
   const inputs = [null, ...(s.tv.inputs.length ? s.tv.inputs.map((i) => i.id) : Object.keys(s.settings.inputs))];
   const deploymentLabel = { browser: 'Browser (development)', cast: 'Cast / AirPlay from a computer', 'external-hdmi': 'External HDMI device', 'android-tv': 'Android TV launcher' }[s.deployment];
+  const standalone = isStandalone();
   return (
     <>
-      <Group title="Boot into NOIR">
+      {!standalone && <Group title="Boot into NOIR">
         <FRow id="sy-input" icon={Monitor} title="NOIR is connected to" hint="The TV input NOIR runs on (External HDMI or Android TV mode)." value={sys.noirInputId?.replace('-', ' ') ?? 'Not set'}
           onSelect={() => void patchSettings({ system: { noirInputId: cycle(inputs, sys.noirInputId) } })} />
         <FRow id="sy-auto" icon={Power} title="Switch to NOIR when the TV turns on" hint="NOIR watches the TV over Wi‑Fi and selects its input at power-on. Requires a paired TV."
           right={<Toggle on={sys.autoSwitchOnPowerOn} />} disabled={!sys.noirInputId} onSelect={() => void patchSettings({ system: { autoSwitchOnPowerOn: !sys.autoSwitchOnPowerOn } })} />
-      </Group>
+      </Group>}
       <Group title="About">
         <FRow id="sy-ver" icon={Cpu} title="NOIR version" value={s.version} />
         <FRow id="sy-mode" title="Deployment" value={deploymentLabel} />
@@ -294,7 +326,9 @@ function SystemSection({ s }: { s: NoirState }) {
         <FRow id="sy-refresh" icon={RefreshCw} title="Refresh TV state, logos and photos" onSelect={() => void api('/api/tv/refresh', { body: {} }).then(() => pushToast({ tone: 'success', title: 'Refreshed' }))} />
       </Group>
       <Group title="Recovery">
-        <FRow id="sy-recover" icon={LifeBuoy} title="Getting back to the TV’s own interface" hint="NOIR never modifies your TV. Press the Home button on the TV remote, or switch inputs, to return to VIZIO OS at any time." />
+        <FRow id="sy-recover" icon={LifeBuoy} title="Getting back to the standard interface" hint={standalone
+          ? 'NOIR never modifies your TV. To use the Google TV home again, open Android settings → Apps → NOIR → Uninstall, or see docs/DEPLOYMENT.md (Recovery).'
+          : 'NOIR never modifies your TV. Press the Home button on the TV remote, or switch inputs, to return to VIZIO OS at any time.'} />
         <FRow id="sy-reset" icon={RotateCcw} title="Reset preferences" hint="Restores default settings. Pairings are kept." onSelect={() => setConfirmReset(true)} />
       </Group>
       <AnimatePresence>
@@ -331,7 +365,7 @@ export default function Settings() {
       <section className="scroll-hidden glass min-w-0 flex-1 overflow-y-auto rounded-[2rem] p-8" style={{ background: 'linear-gradient(180deg, rgba(36,28,52,0.55), rgba(20,16,30,0.6))' }}>
         {section === 'appearance' && <Appearance s={state} />}
         {section === 'home' && <HomeSection s={state} />}
-        {section === 'devices' && <Devices s={state} />}
+        {section === 'devices' && (isStandalone() ? <ThisDevice s={state} /> : <Devices s={state} />)}
         {section === 'music' && <MusicSection s={state} />}
         {section === 'ambient' && <AmbientSection s={state} />}
         {section === 'system' && <SystemSection s={state} />}

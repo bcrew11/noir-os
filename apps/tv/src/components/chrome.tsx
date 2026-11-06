@@ -39,7 +39,8 @@ export function Header() {
 
   const linkOk = conn === 'online';
   const tvOk = tv?.adapter === 'mock' || (tv?.adapter === 'vizio' && tv.reachable);
-  const statusLabel = !linkOk ? 'NOIR server offline' : tv?.adapter === 'none' ? 'No TV paired' : tvOk ? (tv?.adapter === 'mock' ? 'Simulated TV' : 'TV connected') : 'TV unreachable';
+  const standalone = useNoir((s) => s.state?.deployment === 'android-tv' && s.state.tv.adapter === 'none');
+  const statusLabel = standalone ? (navigator.onLine ? 'Online' : 'Offline') : !linkOk ? 'NOIR server offline' : tv?.adapter === 'none' ? 'No TV paired' : tvOk ? (tv?.adapter === 'mock' ? 'Simulated TV' : 'TV connected') : 'TV unreachable';
 
   return (
     <header className="flex items-center justify-between">
@@ -50,7 +51,7 @@ export function Header() {
       <div className="flex items-center gap-6">
         <DemoBadge />
         <div className="flex items-center gap-2.5 text-fg-muted" title={statusLabel}>
-          {linkOk && tvOk ? <Wifi className="size-6" strokeWidth={1.75} /> : <WifiOff className="size-6 text-amber-300/90" strokeWidth={1.75} />}
+          {(standalone ? navigator.onLine : linkOk && tvOk) ? <Wifi className="size-6" strokeWidth={1.75} /> : <WifiOff className="size-6 text-amber-300/90" strokeWidth={1.75} />}
           <span className="text-[1rem]">{statusLabel}</span>
         </div>
         <span className="text-[1.75rem] font-normal tabular-nums tracking-tight text-fg">
@@ -111,10 +112,12 @@ function NavItem({ item, active }: { item: (typeof NAV)[number]; active: boolean
 
 export function NavBar() {
   const screen = useUI((s) => s.screen);
+  // Without TV control (Android TV launcher) the Inputs screen has nothing to do.
+  const noInputs = useNoir((s) => s.state?.deployment === 'android-tv' && s.state.tv.adapter === 'none');
   useEffect(() => { const off = setGroupPreferred('nav', () => `nav-${useUI.getState().screen}`); return () => void off(); }, []);
   return (
     <nav className="glass mx-auto flex w-max items-center gap-1 rounded-full p-2" style={{ boxShadow: '0 1.5rem 3rem -1rem rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-      {NAV.map((n) => <NavItem key={n.id} item={n} active={screen === n.id} />)}
+      {NAV.filter((n) => !(noInputs && n.id === 'inputs')).map((n) => <NavItem key={n.id} item={n} active={screen === n.id} />)}
     </nav>
   );
 }
