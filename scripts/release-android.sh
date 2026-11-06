@@ -24,10 +24,10 @@ WT=$(mktemp -d)
 trap 'git worktree remove --force "$WT" >/dev/null 2>&1 || true' EXIT
 if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
   git fetch -q origin "$BRANCH"
-  git worktree add -q -B "$BRANCH" "$WT" "origin/$BRANCH"
+  git worktree add -q --detach "$WT" "origin/$BRANCH"
 else
   git worktree add -q --detach "$WT"
-  (cd "$WT" && git checkout -q --orphan "$BRANCH" && git rm -rq . && rm -rf ./*)
+  (cd "$WT" && git switch -q --orphan "$BRANCH")
 fi
 [ -f "$WT/noir-launcher-$NAME.apk" ] && { echo "Version $NAME is already published — bump $PROPS."; exit 1; }
 
@@ -44,6 +44,7 @@ require("fs").writeFileSync(out, JSON.stringify(m, null, 2) + "\n");
 (cd "$WT" && ls -1t noir-launcher-*.apk | tail -n +4 | xargs -r git rm -q --ignore-unmatch -- 2>/dev/null; ls -1t noir-launcher-*.apk | tail -n +4 | xargs -r rm -f)
 printf '# NOIR updates\n\nPublished builds of the NOIR Google TV launcher. Installed launchers read `noir-update.json`.\n\nLatest: **%s**\n' "$NAME" > "$WT/README.md"
 (cd "$WT" && git add -A && git -c user.name="NOIR release" -c user.email="noreply@noir.local" commit -qm "NOIR $NAME" && git push -q origin "HEAD:$BRANCH")
+git worktree remove --force "$WT" >/dev/null 2>&1 || true
 
 NEXT_CODE=$((CODE + 1))
 NEXT_NAME=$(echo "$NAME" | awk -F. '{ printf "%d.%d.%d", $1, $2, $3 + 1 }')
