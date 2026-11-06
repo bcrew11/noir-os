@@ -59,7 +59,7 @@ plus the NOIR server running somewhere always on: a home computer, a Raspberry P
 1. **Server:** on the always-on machine, set `NOIR_DEPLOYMENT=android-tv` and start NOIR. Note its address, e.g. `http://192.168.1.20:8787/`. Giving it a DHCP reservation in your router helps.
 2. **Build the APK** (on a computer with Android Studio or the Android SDK and JDK 17):
    ```bash
-   cd android && gradle wrapper && ./gradlew assembleDebug
+   cd android && ./gradlew assembleDebug
    ```
    The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`.
 3. **Install wirelessly.** On the stick: *Settings → System → About* → click *Android TV OS build* 7 times to enable Developer options. Then turn on *USB debugging* (and *Wireless debugging* where offered).
@@ -89,9 +89,9 @@ plus the NOIR server running somewhere always on: a home computer, a Raspberry P
 In this mode NOIR opens YouTube TV, Netflix and the rest **on the stick** through Android, and
 checks first that each app is installed. Phone shortcuts are forwarded to the launcher.
 
-**Status:** the Android project in `android/` is complete source but was **not compiled or run** in
-the environment that produced it, because no Android SDK was available. Expect small fixes on the
-first build.
+**Status:** the APK **builds cleanly** (Android SDK 35, AGP 8.7, JDK 21) and the manifest shows it as
+a Leanback launcher and HOME-capable app. It has **not yet been run on a real Android TV device**.
+A prebuilt debug APK can be installed directly with `adb install`.
 
 ## D. External HDMI computer (Raspberry Pi 5 / mini PC)
 
