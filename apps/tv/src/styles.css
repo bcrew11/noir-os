@@ -52,6 +52,13 @@ html[data-motion='off'] *, html.low-perf .anim-a, html.low-perf .anim-b, html.lo
 html[data-motion='off'] .parallax, html[data-motion='reduced'] .parallax, html.low-perf .parallax { transform: none; transition: none; }
 html[data-motion='off'] * { transition: none !important; }
 
+/* Low-performance (streaming sticks): no blur filters, no grain blend, lighter focus glow. */
+html.low-perf [data-heavy-fx], html.low-perf .grain { display: none; }
+html.low-perf .focus-ring {
+  box-shadow: 0 0 0 0.15rem color-mix(in srgb, var(--noir-highlight) 90%, white), 0 0 0.9rem 0.1rem color-mix(in srgb, var(--noir-accent) 45%, transparent);
+}
+html.low-perf .bg-layer { will-change: auto; }
+
 /* Film grain to keep gradients from banding on TV panels. */
 .grain {
   position: absolute; inset: 0; pointer-events: none; opacity: 0.06; mix-blend-mode: overlay;

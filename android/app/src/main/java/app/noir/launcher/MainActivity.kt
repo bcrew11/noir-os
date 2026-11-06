@@ -259,7 +259,15 @@ class MainActivity : Activity() {
     private fun launchIntent(pkg: String): Intent? =
         packageManager.getLeanbackLaunchIntentForPackage(pkg) ?: packageManager.getLaunchIntentForPackage(pkg)
 
+    private var installedCache: Pair<Long, List<Pair<String, String>>>? = null
+
+    /** Launchable apps, cached briefly: querying the package manager is slow on streaming sticks. */
     private fun installed(): List<Pair<String, String>> {
+        installedCache?.let { (at, list) -> if (SystemClock.elapsedRealtime() - at < 15_000) return list }
+        return scanInstalled().also { installedCache = SystemClock.elapsedRealtime() to it }
+    }
+
+    private fun scanInstalled(): List<Pair<String, String>> {
         val pm = packageManager
         val out = LinkedHashMap<String, String>()
         for (cat in listOf(Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER)) {

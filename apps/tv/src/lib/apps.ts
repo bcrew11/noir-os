@@ -1,6 +1,6 @@
 import { APP_CATALOG, type AppDefinition, type NoirState } from '@noir/core';
 import { command, pushToast, useNoir } from '@noir/ui';
-import { androidBridge } from './android.ts';
+import { androidBridge, packageCache } from './android.ts';
 
 export function allApps(state: NoirState | null): AppDefinition[] {
   return [...APP_CATALOG, ...(state?.customApps ?? [])];
@@ -15,6 +15,8 @@ export function useFavorites(): AppDefinition[] {
 export type LaunchReadiness = 'demo' | 'ready' | 'verified' | 'needs-setup' | 'no-tv' | 'web-only' | 'installed' | 'not-installed';
 
 export function androidPackageFor(app: AppDefinition): string | null {
+  const cached = packageCache.get(app.id);
+  if (cached) return cached;
   try { return androidBridge()?.findApp(JSON.stringify(app.androidPackages ?? []), app.name) ?? null; } catch { return null; }
 }
 
@@ -29,8 +31,8 @@ export function openInStore(app: AppDefinition): boolean {
 export function launchReadiness(state: NoirState | null, appId: string): LaunchReadiness {
   if (!state) return 'no-tv';
   if (androidBridge()) {
-    const app = allApps(state).find((a) => a.id === appId);
-    return app && androidPackageFor(app) ? 'installed' : 'not-installed';
+    // Filled once per app scan (see standalone.ts) — no native calls while rendering.
+    return state.launch[appId] ? 'installed' : 'not-installed';
   }
   if (state.tv.adapter === 'mock') return 'demo';
   if (state.tv.adapter === 'none') return 'no-tv';

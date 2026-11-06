@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isStandalone } from '../lib/android.ts';
 
 /**
  * In `auto` mode, sample ~90 animation frames shortly after start. If the median frame
@@ -26,5 +27,6 @@ export function usePerformanceProbe(mode: 'auto' | 'high' | 'low'): boolean {
     }, 1500);
     return () => { clearTimeout(start); cancelAnimationFrame(raf); };
   }, [mode]);
-  return mode === 'low' || (mode === 'auto' && slow);
+  // Streaming sticks: default to the lightweight path; Settings → Appearance → Performance → High overrides.
+  return mode === 'low' || (mode === 'auto' && (slow || isStandalone()));
 }

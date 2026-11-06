@@ -61,7 +61,7 @@ function Dunes() {
           <Defs />
           <path d={r.d} fill={r.fill} />
           <path d={r.d} fill="url(#shade)" />
-          <path d={rimPath(r.d)} fill="none" stroke="url(#rim)" strokeWidth={34} opacity={r.rim * 0.45} filter="url(#soft)" />
+          <path data-heavy-fx d={rimPath(r.d)} fill="none" stroke="url(#rim)" strokeWidth={34} opacity={r.rim * 0.45} filter="url(#soft)" />
           <path d={rimPath(r.d)} fill="none" stroke="url(#rim)" strokeWidth={1.6} opacity={r.rim} />
         </svg>
       ))}

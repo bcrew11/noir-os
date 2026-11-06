@@ -42,6 +42,7 @@ export function AppCard({ app, focusId, group, onSelect, onLongSelect, size = 'h
       {/* bloom behind the card */}
       <motion.div
         aria-hidden
+        data-heavy-fx
         className="pointer-events-none absolute -inset-6 rounded-[2.5rem]"
         style={{ background: `radial-gradient(60% 60% at 50% 55%, ${app.brand.glow ?? 'rgba(192,132,252,0.3)'}, color-mix(in srgb, var(--noir-accent) 22%, transparent) 55%, transparent 75%)`, filter: 'blur(14px)' }}
         animate={{ opacity: focused ? 1 : 0 }}

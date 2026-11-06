@@ -34,6 +34,9 @@ export function readUpdateStatus(): UpdateStatus | null {
   } catch { return null; }
 }
 
+/** appId → Android package, filled by the standalone app scan. Avoids bridge calls on every render. */
+export const packageCache = new Map<string, string>();
+
 export const androidBridge = (): AndroidBridge | undefined => (globalThis as { NoirAndroid?: AndroidBridge }).NoirAndroid;
 
 /** True when NOIR runs self-contained inside the Android TV launcher (no NOIR server). */

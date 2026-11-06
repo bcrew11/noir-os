@@ -10,7 +10,7 @@ import {
   APP_CATALOG, type AppDefinition, type Command, type CommandResult, type MusicState, type NoirState, type Settings,
 } from '@noir/core';
 import { setLocalBackend, useNoir } from '@noir/ui';
-import { androidBridge, installedApps, type NowPlaying } from './lib/android.ts';
+import { androidBridge, installedApps, packageCache, type NowPlaying } from './lib/android.ts';
 import { allApps, launchApp } from './lib/apps.ts';
 
 const SETTINGS_KEY = 'noir.settings';
@@ -34,15 +34,22 @@ function saveSettings(s: Settings) {
 }
 
 /** Installed apps that aren't in NOIR's catalog still appear in the library. */
-function discoverApps(): { extra: AppDefinition[]; logos: Record<string, string> } {
+function discoverApps(): { extra: AppDefinition[]; logos: Record<string, string>; launch: NoirState['launch'] } {
   const bridge = androidBridge();
   const installed = installedApps();
+  const byPkg = new Map(installed.map((a) => [a.pkg, a.label]));
+  const byLabel = new Map(installed.map((a) => [a.label.toLowerCase(), a.pkg]));
   const logos: Record<string, string> = {};
+  const launch: NoirState['launch'] = {};
   const claimed = new Set<string>();
+  packageCache.clear();
   for (const app of APP_CATALOG) {
-    const pkg = bridge?.findApp(JSON.stringify(app.androidPackages ?? []), app.name);
+    // Match locally against one installed-apps snapshot instead of one native call per app.
+    const pkg = (app.androidPackages ?? []).find((p) => byPkg.has(p)) ?? byLabel.get(app.name.toLowerCase());
     if (!pkg) continue;
     claimed.add(pkg);
+    packageCache.set(app.id, pkg);
+    launch[app.id] = { source: 'manual', verified: true };
     const banner = bridge?.appBanner(pkg);
     if (banner) logos[app.id] = banner;
   }
@@ -58,10 +65,13 @@ function discoverApps(): { extra: AppDefinition[]; logos: Record<string, string>
       brand: { background: 'linear-gradient(160deg,#241d33,#14101d)', color: '#e9e4f5', font: 'sans', weight: 700 },
     }));
   for (const app of extra) {
-    const banner = bridge?.appBanner(app.androidPackages![0]!);
+    const pkg = app.androidPackages![0]!;
+    packageCache.set(app.id, pkg);
+    launch[app.id] = { source: 'manual', verified: true };
+    const banner = bridge?.appBanner(pkg);
     if (banner) logos[app.id] = banner;
   }
-  return { extra, logos };
+  return { extra, logos, launch };
 }
 
 function musicFrom(np: NowPlaying | null): MusicState {
@@ -100,7 +110,7 @@ export function startStandalone() {
       power: 'unknown', inputs: [], currentInput: null, audio: { volume: null, muted: null }, checkedAt: Date.now(),
     },
     music: musicFrom(readNowPlaying()),
-    launch: {},
+    launch: apps.launch,
     customApps: apps.extra,
     logos: apps.logos,
     photos: [],

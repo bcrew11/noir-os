@@ -35,7 +35,7 @@ export default function Music() {
     <div className="relative flex h-full items-center gap-20 pb-28">
       {/* immersive color wash from the artwork */}
       {track?.artUrl && (
-        <div aria-hidden className="pointer-events-none absolute -left-40 top-0 h-[44rem] w-[60rem] opacity-50" style={{ backgroundImage: `url("${track.artUrl}")`, backgroundSize: 'cover', filter: 'blur(90px) saturate(140%)' }} />
+        <div aria-hidden data-heavy-fx className="pointer-events-none absolute -left-40 top-0 h-[44rem] w-[60rem] opacity-50" style={{ backgroundImage: `url("${track.artUrl}")`, backgroundSize: 'cover', filter: 'blur(90px) saturate(140%)' }} />
       )}
       <motion.div key={track?.id ?? 'none'} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: level === 'off' ? 0 : 0.4 }}
         className="relative shrink-0">
