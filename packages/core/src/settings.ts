@@ -57,14 +57,11 @@ export const SettingsSchema = z.object({
     showGreeting: z.boolean().default(true),
     showMusicWidget: z.boolean().default(true),
     showInputWidget: z.boolean().default(true),
-    /** Input featured on the home widget. */
-    widgetInputId: z.string().default('HDMI-1'),
+    /** Input featured on the home widget; null = pick automatically (first HDMI source that isn't a soundbar). */
+    widgetInputId: z.string().nullable().default(null),
   }).default({}),
-  inputs: z.record(z.string(), InputConfigSchema).default({
-    'HDMI-1': { label: 'Game Console', icon: 'console', hidden: false },
-    'HDMI-2': { label: 'Streaming Device', icon: 'streaming', hidden: false },
-    'HDMI-3': { label: 'Computer', icon: 'computer', hidden: false },
-  }),
+  /** Per-input overrides. Inputs without an entry use the name the TV reports (e.g. "Roku Streaming"). */
+  inputs: z.record(z.string(), InputConfigSchema).default({}),
   ambient: z.object({
     theme: z.enum(keys(AMBIENT_THEMES)).default('midnight'),
     /** Minutes of inactivity inside NOIR before ambient mode starts. 0 disables. */

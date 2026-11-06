@@ -69,3 +69,11 @@ export async function launchApp(app: AppDefinition) {
   }
   await command({ type: 'app.launch', appId: app.id });
 }
+
+/** The input featured on the Home widget: the user's choice, else the first HDMI source that isn't a soundbar. */
+export function widgetInput(state: NoirState | null): string {
+  const chosen = state?.settings.home.widgetInputId;
+  if (chosen) return chosen;
+  const auto = state?.tv.inputs.find((i) => /^HDMI/i.test(i.id) && !/sound ?bar|arc|audio/i.test(i.systemName));
+  return auto?.id ?? 'HDMI-1';
+}

@@ -6,7 +6,9 @@ import { parseVizioCatalog } from './app-catalog.ts';
 
 /** A fake SmartCast TV. `sticky` simulates a TV that accepts writes but doesn't apply them. */
 function fakeTv(opts: { sticky?: boolean } = {}) {
-  const st = { input: 'HDMI-1', volume: 20, muted: false, app: null as null | Record<string, unknown>, power: 1 };
+  // Input data as reported by the user's onn W4K65M-1031 (API 3.7.3): current input comes back by display name.
+  const labels: Record<string, string> = { CAST: 'SMARTCAST', 'HDMI-1': 'VIZIO Soundbar', 'HDMI-2': 'HDMI-2', 'HDMI-3': 'Roku Streaming', COMP: 'COMP', TV: 'TV' };
+  const st = { input: 'CAST', volume: 20, muted: false, app: null as null | Record<string, unknown>, power: 1 };
   const calls: Array<{ method: string; path: string; body?: unknown; auth?: string }> = [];
   const ok = (extra: object) => ({ status: 200, body: JSON.stringify({ STATUS: { RESULT: 'SUCCESS' }, ...extra }) });
   const transport: Transport = async ({ method, path, body, headers }) => {
@@ -15,9 +17,13 @@ function fakeTv(opts: { sticky?: boolean } = {}) {
     if (!headers.AUTH && !path.startsWith('/pairing')) return { status: 403, body: '' };
     switch (`${method} ${path}`) {
       case `GET ${PATHS.power}`: return ok({ ITEMS: [{ VALUE: st.power }] });
-      case `GET ${PATHS.currentInput}`: return ok({ ITEMS: [{ VALUE: st.input, HASHVAL: 42 }] });
-      case `PUT ${PATHS.currentInput}`: if (!opts.sticky) st.input = b.VALUE; return ok({});
-      case `GET ${PATHS.inputs}`: return ok({ ITEMS: [{ NAME: 'HDMI-1', VALUE: { NAME: 'PlayStation' } }, { NAME: 'HDMI-2', VALUE: { NAME: 'HDMI-2' } }, { NAME: 'CAST', VALUE: { NAME: 'CAST' } }] });
+      case `GET ${PATHS.currentInput}`: return ok({ ITEMS: [{ VALUE: labels[st.input], HASHVAL: 42 }] });
+      case `PUT ${PATHS.currentInput}`: {
+        const id = Object.keys(labels).find((k) => k === b.VALUE || labels[k] === b.VALUE);
+        if (!opts.sticky && id) st.input = id;
+        return ok({});
+      }
+      case `GET ${PATHS.inputs}`: return ok({ ITEMS: Object.entries(labels).map(([NAME, n]) => ({ NAME, CNAME: NAME.toLowerCase().replace('-', ''), VALUE: { NAME: n } })) });
       case `GET ${PATHS.audio}`: return ok({ ITEMS: [{ CNAME: 'volume', VALUE: st.volume }, { CNAME: 'mute', VALUE: st.muted ? 'On' : 'Off' }] });
       case `GET ${PATHS.volume}`: return ok({ ITEMS: [{ VALUE: st.volume, HASHVAL: 7 }] });
       case `PUT ${PATHS.volume}`: if (!opts.sticky) st.volume = b.VALUE; return ok({});
@@ -54,15 +60,24 @@ describe('VizioAdapter', () => {
     expect(tv.calls.every((c) => c.auth === 'tok')).toBe(true);
   });
 
-  it('lists inputs without the cast pseudo-input', async () => {
+  it('lists inputs with the TV’s own names and maps SMARTCAST to VIZIO Home', async () => {
     const { a } = make();
-    expect((await a.getInputs()).map((i) => i.id)).toEqual(['HDMI-1', 'HDMI-2']);
+    const inputs = await a.getInputs();
+    expect(inputs.find((i) => i.id === 'HDMI-3')?.systemName).toBe('Roku Streaming');
+    expect(inputs.find((i) => i.id === 'CAST')?.systemName).toBe('VIZIO Home');
+    expect(await a.getCurrentInput()).toBe('CAST');
+  });
+
+  it('recognises the VIZIO home screen as “no app”', () => {
+    expect(VizioAdapter.isHomeScreen({ APP_ID: '1', NAME_SPACE: 4, MESSAGE: '{"app":"home","bundle":"bundles/home"}' })).toBe(true);
+    expect(VizioAdapter.isHomeScreen({ APP_ID: '1', NAME_SPACE: 3, MESSAGE: null })).toBe(false);
   });
 
   it('reports verified only when the TV reads back the new input', async () => {
     const { a } = make();
-    const r = await a.switchInput('HDMI-2');
+    const r = await a.switchInput('HDMI-3');
     expect(r.status).toBe('verified');
+    expect(await a.getCurrentInput()).toBe('HDMI-3');
     expect((await a.getCapabilities()).inputs.level).toBe('verified');
   });
 

@@ -128,6 +128,9 @@ export class TVManager {
   }
   async mute(muted?: boolean) {
     if (!this.adapter) return this.noTv();
+    if (muted === undefined && this.status.audio.muted == null && this.adapter instanceof VizioAdapter) {
+      return this.afterCommand(await this.adapter.toggleMute());
+    }
     const next = muted ?? !(this.status.audio.muted ?? false);
     return this.afterCommand(await this.adapter.setMuted(next));
   }
@@ -173,7 +176,9 @@ export class TVManager {
     if (!this.adapter || this.adapter.kind !== 'vizio') return unsupported('Learning app launch settings requires a paired VIZIO TV.');
     const cur = await this.adapter.getCurrentApp().catch((e: Error) => e);
     if (cur instanceof Error) return failed(`Couldn’t read the current app: ${cur.message}`);
-    if (!cur.config) return failed(`No app is open on the TV. Open ${app.name} with the TV remote first, then try again.`);
+    if (!cur.config || VizioAdapter.isHomeScreen(cur.config)) {
+      return failed(`The TV is on its home screen. Open ${app.name} with the TV remote first, then try “Learn from TV” again.`);
+    }
     this.store.setLaunch(appId, { platform: VIZIO_PLATFORM, config: cur.config, source: 'learned', verified: false });
     this.opts.onChange();
     return { status: 'verified', message: `Learned how to open ${app.name}.`, detail: { config: cur.config } };

@@ -5,6 +5,7 @@ import { useFocusable } from '../focus/focus.ts';
 import { useMotion } from '../hooks/useMotion.ts';
 import { useUI } from '../store/ui.ts';
 import { INPUT_ICON } from './chrome.tsx';
+import { widgetInput } from '../lib/apps.ts';
 import { FButton, cx, focusTransition } from './primitives.tsx';
 
 export function Artwork({ url, className, iconClass }: { url?: string; className?: string; iconClass?: string }) {
@@ -54,7 +55,7 @@ export function MusicWidget() {
 
 export function InputWidget() {
   const state = useNoir((s) => s.state);
-  const inputId = state?.settings.home.widgetInputId ?? 'HDMI-1';
+  const inputId = widgetInput(state);
   const cfg = state?.settings.inputs[inputId];
   const sys = state?.tv.inputs.find((i) => i.id === inputId);
   const active = state?.tv.currentInput === inputId;
@@ -64,7 +65,7 @@ export function InputWidget() {
     onSelect: () => void command({ type: 'tv.input', inputId }),
   });
   const t = focusTransition(useMotion());
-  const Icon = INPUT_ICON[cfg?.icon ?? 'console'];
+  const Icon = INPUT_ICON[cfg?.icon ?? (/roku|stream|chromecast|fire/i.test(sys?.systemName ?? '') ? 'streaming' : 'console')];
   const label = inputId.replace('-', ' ');
   return (
     <motion.div ref={ref} {...pointer} data-focused={focused || undefined} role="button" aria-label={`Switch to ${label}`} animate={{ scale: focused ? 1.03 : 1 }} transition={t}

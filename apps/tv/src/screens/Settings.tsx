@@ -11,6 +11,7 @@ import { Keyboard } from '../components/Keyboard.tsx';
 import { FButton, FRow, Pill, Toggle, cx } from '../components/primitives.tsx';
 import { useFocusable } from '../focus/focus.ts';
 import { useScreenFocus } from '../hooks/useScreenFocus.ts';
+import { widgetInput } from '../lib/apps.ts';
 import { useUI } from '../store/ui.ts';
 
 const SECTIONS = [
@@ -88,8 +89,9 @@ function HomeSection({ s }: { s: NoirState }) {
         <FRow id="hm-greet" title="Greeting" right={<Toggle on={h.showGreeting} />} onSelect={() => set({ showGreeting: !h.showGreeting })} />
         <FRow id="hm-music" title="Music widget" right={<Toggle on={h.showMusicWidget} />} onSelect={() => set({ showMusicWidget: !h.showMusicWidget })} />
         <FRow id="hm-input" title="Input widget" right={<Toggle on={h.showInputWidget} />} onSelect={() => set({ showInputWidget: !h.showInputWidget })} />
-        <FRow id="hm-input-id" title="Input shown on Home" value={`${h.widgetInputId.replace('-', ' ')} · ${s.settings.inputs[h.widgetInputId]?.label ?? ''}`}
-          onSelect={() => inputs.length && set({ widgetInputId: cycle(inputs, h.widgetInputId) })} />
+        <FRow id="hm-input-id" title="Input shown on Home"
+          value={h.widgetInputId ? `${h.widgetInputId.replace('-', ' ')} · ${s.settings.inputs[h.widgetInputId]?.label ?? s.tv.inputs.find((i) => i.id === h.widgetInputId)?.systemName ?? ''}` : `Automatic (${widgetInput(s).replace('-', ' ')})`}
+          onSelect={() => inputs.length && set({ widgetInputId: cycle<string | null>([null, ...inputs], h.widgetInputId) })} />
       </Group>
     </>
   );

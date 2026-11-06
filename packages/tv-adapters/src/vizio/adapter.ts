@@ -22,6 +22,7 @@ export const PATHS = {
 } as const;
 
 type Item = Record<string, unknown>;
+interface RawInput { id: string; cname?: string; label: string }
 const items = (r: { ITEMS?: Item[] }) => (Array.isArray(r.ITEMS) ? r.ITEMS : []);
 const str = (v: unknown) => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : undefined);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -78,8 +79,12 @@ export class VizioAdapter implements TVAdapter {
     const community = 'Community-documented SmartCast API; not yet confirmed on this TV.';
     return {
       power: this.cap('power', `${community} Power-on over Wi‑Fi only works if the TV keeps its network awake in standby (Quick Start / Eco settings).`),
-      volume: this.cap('volume', community),
-      mute: this.cap('mute', community),
+      volume: this.audioReadable === false
+        ? { level: 'documented', note: 'This TV doesn’t report its volume; NOIR sends volume up/down key presses, which can’t be confirmed.' }
+        : this.cap('volume', community),
+      mute: this.audioReadable === false
+        ? { level: 'documented', note: 'Mute is toggled by key press and can’t be confirmed on this TV.' }
+        : this.cap('mute', community),
       inputs: this.cap('inputs', community),
       remoteKeys: { level: 'documented', note: 'Key presses are sent but cannot be confirmed by the TV.' },
       appLaunch: this.cap('appLaunch', 'Launch IDs are learned from your TV per app. Unlearned apps cannot be launched.'),
@@ -115,17 +120,45 @@ export class VizioAdapter implements TVAdapter {
     }
   }
 
-  async getInputs(): Promise<InputSource[]> {
+  /**
+   * Raw input list. On onn W4K65M-1031 / API 3.7.3 each item looks like
+   * `{ NAME: "HDMI-3", CNAME: "hdmi3", VALUE: { NAME: "Roku Streaming" } }`, plus a `CAST`
+   * entry named "SMARTCAST" (the VIZIO home screen), `COMP` and the read-only `TV` tuner.
+   */
+  private async rawInputs(): Promise<RawInput[]> {
     const r = await this.client.get(PATHS.inputs);
-    return items(r)
-      .map((it) => {
-        const id = str(it.NAME) ?? str(it.CNAME);
-        if (!id) return null;
-        const value = it.VALUE as Item | undefined;
-        const label = (value && str(value.NAME)) || id;
-        return { id, systemName: label };
-      })
-      .filter((x): x is InputSource => !!x && !/^(CAST|SMARTCAST)$/i.test(x.id));
+    const out: RawInput[] = [];
+    for (const it of items(r)) {
+      const id = str(it.NAME) ?? str(it.CNAME);
+      if (!id) continue;
+      const value = it.VALUE as Item | undefined;
+      out.push({ id, cname: str(it.CNAME), label: (value && str(value.NAME)) || id });
+    }
+    return out;
+  }
+
+  private inputCache: RawInput[] = [];
+
+  async getInputs(): Promise<InputSource[]> {
+    this.inputCache = await this.rawInputs();
+    return this.inputCache.map((i) => ({
+      id: i.id,
+      // The CAST input is the TV's own interface; give it a recognisable name.
+      systemName: /^(CAST|SMARTCAST)$/i.test(i.id) ? 'VIZIO Home' : i.label,
+    }));
+  }
+
+  /**
+   * The TV reports the current input by *display name* on this firmware (e.g. "SMARTCAST" for the
+   * CAST input). Map whatever it reports back to the stable input id ("CAST", "HDMI-3", …).
+   */
+  normalizeInput(reported: string | null): string | null {
+    if (!reported) return null;
+    const r = reported.toLowerCase();
+    const hit = this.inputCache.find((i) => i.id.toLowerCase() === r || i.label.toLowerCase() === r || i.cname?.toLowerCase() === r);
+    if (hit) return hit.id;
+    if (r === 'smartcast') return 'CAST';
+    return reported;
   }
 
   private async currentInputItem() {
@@ -135,7 +168,8 @@ export class VizioAdapter implements TVAdapter {
   }
 
   async getCurrentInput(): Promise<string | null> {
-    return (await this.currentInputItem()).value;
+    if (!this.inputCache.length) await this.getInputs().catch(() => undefined);
+    return this.normalizeInput((await this.currentInputItem()).value);
   }
 
   async getAudio(): Promise<AudioState> {
@@ -143,11 +177,16 @@ export class VizioAdapter implements TVAdapter {
     const byName = new Map(items(r).map((it) => [String(it.CNAME ?? '').toLowerCase(), it]));
     const vol = byName.get('volume')?.VALUE;
     const mute = byName.get('mute')?.VALUE;
+    // On W4K65M-1031 with a soundbar on ARC, the audio menu has no volume/mute entries at all,
+    // so both come back null and NOIR falls back to (unconfirmable) volume key presses.
+    this.audioReadable = vol != null;
     return {
       volume: typeof vol === 'number' ? vol : vol != null && !Number.isNaN(Number(vol)) ? Number(vol) : null,
       muted: mute == null ? null : String(mute).toLowerCase() === 'on',
     };
   }
+
+  private audioReadable: boolean | null = null;
 
   async getCurrentApp(): Promise<CurrentApp> {
     const r = await this.client.get(PATHS.currentApp);
@@ -158,6 +197,9 @@ export class VizioAdapter implements TVAdapter {
 
   async setVolume(volume: number): Promise<CommandResult> {
     const target = Math.max(0, Math.min(100, Math.round(volume)));
+    if (this.audioReadable === false) {
+      return unsupported('This TV doesn’t report its volume (e.g. when audio goes to a soundbar), so NOIR can only step it up or down.');
+    }
     try {
       const r = await this.client.get(PATHS.volume);
       const hash = items(r)[0]?.HASHVAL;
@@ -168,6 +210,16 @@ export class VizioAdapter implements TVAdapter {
       return sent(`Volume change sent; TV reports ${audio.volume ?? 'unknown'}.`, { volume: audio.volume });
     } catch (e) {
       return this.wrapError(e, 'Volume change');
+    }
+  }
+
+  /** Toggle mute with a key press. Used when the TV doesn't report mute state. */
+  async toggleMute(): Promise<CommandResult> {
+    try {
+      await this.client.put(PATHS.keys, keyPayload([VIZIO_KEY_CODES.mute]));
+      return sent('Mute toggled — this TV doesn’t report mute state, so it can’t be confirmed.');
+    } catch (e) {
+      return this.wrapError(e, 'Mute');
     }
   }
 
@@ -200,15 +252,32 @@ export class VizioAdapter implements TVAdapter {
 
   async switchInput(inputId: string): Promise<CommandResult> {
     try {
-      const { hash } = await this.currentInputItem();
-      await this.client.put(PATHS.currentInput, { REQUEST: 'MODIFY', VALUE: inputId, HASHVAL: hash });
-      await sleep(this.verifyDelayMs);
-      const now = await this.getCurrentInput();
-      if (now?.toLowerCase() === inputId.toLowerCase()) return this.mark('inputs', ok(`Switched to ${inputId}`, { currentInput: now }));
+      if (!this.inputCache.length) await this.getInputs();
+      const input = this.inputCache.find((i) => i.id.toLowerCase() === inputId.toLowerCase());
+      // Try the input id first ("HDMI-3"); if the TV doesn't move, try its display name, since this
+      // firmware reports the current input by name.
+      const candidates = [...new Set([inputId, input?.label].filter((x): x is string => !!x))];
+      let now: string | null = null;
+      for (const value of candidates) {
+        const { hash } = await this.currentInputItem();
+        await this.client.put(PATHS.currentInput, { REQUEST: 'MODIFY', VALUE: value, HASHVAL: hash });
+        await sleep(this.verifyDelayMs);
+        now = await this.getCurrentInput();
+        if (now?.toLowerCase() === inputId.toLowerCase()) {
+          return this.mark('inputs', ok(`Switched to ${input?.label ?? inputId}`, { currentInput: now, sentValue: value }));
+        }
+      }
       return sent(`Input change sent; TV reports ${now ?? 'unknown'}.`, { currentInput: now });
     } catch (e) {
       return this.wrapError(e, 'Input switch');
     }
+  }
+
+  /** True when the "current app" is just the VIZIO home screen, not a streaming app. */
+  static isHomeScreen(config: Record<string, unknown> | null): boolean {
+    if (!config) return true;
+    const msg = typeof config.MESSAGE === 'string' ? config.MESSAGE : '';
+    return /"app"\s*:\s*"home"/.test(msg);
   }
 
   async launchApp(launch: LaunchConfig): Promise<CommandResult> {
