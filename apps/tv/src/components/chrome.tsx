@@ -6,7 +6,7 @@ import { Camera, Disc3, Laptop, Speaker, Cast } from 'lucide-react';
 import { setGroupPreferred, useFocusable } from '../focus/focus.ts';
 import { useMotion } from '../hooks/useMotion.ts';
 import { useUI, type Screen } from '../store/ui.ts';
-import { cx, focusTransition } from './primitives.tsx';
+import { cx, focusLift } from './primitives.tsx';
 import { useEffect } from 'react';
 import { useUpdateStatus } from '../hooks/useUpdate.ts';
 
@@ -36,7 +36,7 @@ export function Header() {
   const go = useUI((s) => s.go);
   const clock = formatClock(now, settings?.appearance.clock24h ?? false);
   const gear = useFocusable<HTMLButtonElement>('header-settings', { group: 'header', onSelect: () => go('settings') });
-  const t = focusTransition(useMotion());
+  const level = useMotion();
 
   const linkOk = conn === 'online';
   const tvOk = tv?.adapter === 'mock' || (tv?.adapter === 'vizio' && tv.reachable);
@@ -60,10 +60,10 @@ export function Header() {
           {clock.time}{clock.suffix && <span className="ml-1.5">{clock.suffix}</span>}
         </span>
         <span className="h-9 w-px bg-line-strong" />
-        <motion.button ref={gear.ref} {...gear.pointer} data-focused={gear.focused || undefined} tabIndex={-1} aria-label="Settings" animate={{ scale: gear.focused ? 1.12 : 1, rotate: gear.focused ? 30 : 0 }} transition={t}
+        <button ref={gear.ref} {...gear.pointer} data-focused={gear.focused || undefined} tabIndex={-1} aria-label="Settings" style={focusLift(gear.focused, level, 1.12, 0, 'rotate(30deg)')}
           className={cx('grid size-13 place-items-center rounded-full transition-colors', gear.focused ? 'bg-white/14 focus-ring text-fg' : 'text-fg/90')}>
           <Settings className="size-8" strokeWidth={1.6} />
-        </motion.button>
+        </button>
       </div>
     </header>
   );

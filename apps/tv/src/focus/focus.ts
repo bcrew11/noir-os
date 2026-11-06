@@ -38,8 +38,10 @@ const activeScope = () => {
   return s[s.length - 1]!;
 };
 
+const lowPerf = () => document.documentElement.classList.contains('low-perf');
+
 function scrollIntoView(el: HTMLElement) {
-  const reduced = document.documentElement.dataset.motion !== 'full';
+  const reduced = document.documentElement.dataset.motion !== 'full' || lowPerf();
   el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
 }
 
@@ -51,7 +53,9 @@ export function focus(id: string | null | undefined, opts: { scroll?: boolean } 
   if (n.group) groupMemory.set(`${n.scope}:${n.group}`, id);
   scopeMemory.set(n.scope, id);
   if (opts.scroll !== false) scrollIntoView(n.el);
-  // Parallax hint for the background (normalised -1..1).
+  // Parallax hint for the background (normalised -1..1). Writing a variable on <html> restyles the
+  // whole page, so skip it whenever parallax is off (reduced motion / streaming sticks).
+  if (lowPerf() || document.documentElement.dataset.motion !== 'full') return true;
   const r = n.el.getBoundingClientRect();
   document.documentElement.style.setProperty('--focus-x', String(((r.left + r.width / 2) / window.innerWidth) * 2 - 1));
   document.documentElement.style.setProperty('--focus-y', String(((r.top + r.height / 2) / window.innerHeight) * 2 - 1));

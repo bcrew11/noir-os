@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
 import { Pencil, Power, Undo2, Volume1, Volume2, VolumeX } from 'lucide-react';
 import { useState } from 'react';
 import { INPUT_ICONS, type InputIcon } from '@noir/core';
@@ -6,7 +6,7 @@ import { command, patchSettings, useNoir } from '@noir/ui';
 import { INPUT_ICON } from '../components/chrome.tsx';
 import { Dialog } from '../components/Dialog.tsx';
 import { Keyboard } from '../components/Keyboard.tsx';
-import { FButton, FRow, Pill, SectionTitle, cx, focusTransition } from '../components/primitives.tsx';
+import { FButton, FRow, Pill, SectionTitle, cx, focusLift } from '../components/primitives.tsx';
 import { useFocusable } from '../focus/focus.ts';
 import { useMotion } from '../hooks/useMotion.ts';
 import { useScreenFocus } from '../hooks/useScreenFocus.ts';
@@ -15,10 +15,10 @@ const PRESETS = ['PlayStation', 'Xbox', 'Nintendo Switch', 'Computer', 'Streamin
 
 function InputCard({ id, label, sublabel, icon, active, onSelect, onLongSelect }: { id: string; label: string; sublabel: string; icon: InputIcon; active: boolean; onSelect: () => void; onLongSelect: () => void }) {
   const { ref, focused, pointer } = useFocusable<HTMLDivElement>(`in-${id}`, { group: 'inputs', onSelect, onLongSelect });
-  const t = focusTransition(useMotion());
+  const level = useMotion();
   const Icon = INPUT_ICON[icon];
   return (
-    <motion.div ref={ref} {...pointer} data-focused={focused || undefined} role="button" aria-label={`${label} (${id})`} animate={{ scale: focused ? 1.05 : 1, y: focused ? -6 : 0 }} transition={t}
+    <div ref={ref} {...pointer} data-focused={focused || undefined} role="button" aria-label={`${label} (${id})`} style={focusLift(focused, level)}
       className={cx('glass relative flex h-64 cursor-pointer flex-col justify-between rounded-[1.75rem] p-7 transition-[background,box-shadow]', focused && 'bg-white/10 focus-ring')}>
       <div className="flex items-start justify-between">
         <div className={cx('grid size-20 place-items-center rounded-2xl border', active ? 'border-highlight/40 bg-primary/25' : 'border-line bg-white/[0.05]')}>
@@ -30,7 +30,7 @@ function InputCard({ id, label, sublabel, icon, active, onSelect, onLongSelect }
         <div className="text-[1.7rem] font-medium text-fg">{label}</div>
         <div className="text-[1.15rem] text-fg-muted">{sublabel}</div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

@@ -1,10 +1,24 @@
-import { motion } from 'motion/react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useFocusable, type FocusableOptions } from '../focus/focus.ts';
 import { useMotion } from '../hooks/useMotion.ts';
 
 export const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(' ');
+
+/**
+ * Focus scale/lift as a CSS transition. Transform transitions run on the compositor (GPU) thread,
+ * so they stay smooth on streaming-stick CPUs — unlike per-frame JavaScript animation.
+ */
+export function focusLift(focused: boolean, level: 'full' | 'reduced' | 'off', scale = 1.05, liftRem = 0.375, extra = ''): CSSProperties {
+  return {
+    transform: focused ? `translate3d(0, ${-liftRem}rem, 0) scale(${scale}) ${extra}` : 'translate3d(0, 0, 0)',
+    transition: level === 'off' ? 'none' : `transform ${level === 'full' ? 220 : 140}ms cubic-bezier(0.22, 0.8, 0.24, 1)`,
+  };
+}
+
+export function fade(visible: boolean, level: 'full' | 'reduced' | 'off', ms = 250): CSSProperties {
+  return { opacity: visible ? 1 : 0, transition: level === 'off' ? 'none' : `opacity ${ms}ms ease` };
+}
 
 /** Standard NOIR focus transition: ~220ms, gentle ease, no bounce. */
 export function focusTransition(level: 'full' | 'reduced' | 'off') {
@@ -31,7 +45,7 @@ export function FButton({ id, children, icon: Icon, label, variant = 'glass', cl
   const pad = size === 'sm' ? 'h-11 px-4 text-[1.05rem]' : size === 'lg' ? 'h-16 px-7 text-[1.35rem]' : 'h-13 px-5 text-[1.2rem]';
   const round = variant === 'round';
   return (
-    <motion.button
+    <button
       ref={ref}
       type="button"
       tabIndex={-1}
@@ -40,8 +54,7 @@ export function FButton({ id, children, icon: Icon, label, variant = 'glass', cl
       data-focused={focused || undefined}
       disabled={opts.disabled}
       {...pointer}
-      animate={{ scale: focused ? 1.06 : 1 }}
-      transition={focusTransition(motionLevel)}
+      style={focusLift(focused, motionLevel, 1.06, 0)}
       className={cx(
         'relative inline-flex shrink-0 items-center justify-center gap-2.5 font-medium outline-none transition-[background,color,box-shadow,opacity] duration-200',
         round ? 'aspect-square rounded-full' : 'rounded-2xl',
@@ -57,7 +70,7 @@ export function FButton({ id, children, icon: Icon, label, variant = 'glass', cl
     >
       {Icon && <Icon className={size === 'lg' ? 'size-7' : size === 'sm' ? 'size-5' : 'size-6'} strokeWidth={1.75} />}
       {children ?? (label && !round && !iconOnly ? <span>{label}</span> : null)}
-    </motion.button>
+    </button>
   );
 }
 
