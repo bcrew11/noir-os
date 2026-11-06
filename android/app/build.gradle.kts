@@ -15,8 +15,9 @@ val noirProps = Properties().apply { rootProject.file("noir.properties").inputSt
 val noirVersionCode = noirProps.getProperty("versionCode").toInt()
 val noirVersionName: String = noirProps.getProperty("versionName")
 val noirUpdateRepo: String = noirProps.getProperty("updateRepo", "").trim()
-// The newest release's manifest; GitHub redirects /latest/download/ to the most recent release.
-val noirUpdateUrl = if (noirUpdateRepo.isEmpty()) "" else "https://github.com/$noirUpdateRepo/releases/latest/download/noir-update.json"
+val noirUpdateBranch: String = noirProps.getProperty("updateBranch", "updates").trim()
+// Releases are published to a dedicated branch of the (public) repo and served by GitHub's raw file host.
+val noirUpdateUrl = if (noirUpdateRepo.isEmpty()) "" else "https://raw.githubusercontent.com/$noirUpdateRepo/$noirUpdateBranch/noir-update.json"
 
 android {
     namespace = "app.noir.launcher"
