@@ -66,6 +66,8 @@ export interface DeviceInfo {
   manufacturer: string;
   model?: string;
   firmware?: string;
+  /** Local API version reported by the TV (e.g. "3.7.3-2640.0001"). */
+  apiVersion?: string;
   serial?: string;
   address?: string;
   /** API port the adapter is speaking to, if applicable. */

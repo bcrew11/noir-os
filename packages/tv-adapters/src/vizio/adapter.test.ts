@@ -29,7 +29,7 @@ function fakeTv(opts: { sticky?: boolean } = {}) {
       }
       case `GET ${PATHS.currentApp}`: return ok({ ITEM: { VALUE: st.app } });
       case `PUT ${PATHS.launchApp}`: if (!opts.sticky) st.app = b.VALUE; return ok({});
-      case `GET ${PATHS.deviceInfo}`: return ok({ ITEMS: [{ VALUE: { MODEL_NAME: 'W4K65M-1031', VERSION: '86.920.9.3-2' } }] });
+      case `GET ${PATHS.deviceInfo}`: return ok({ ITEMS: [{ VALUE: { MODEL_NAME: 'W4K65M-1031', CAST_NAME: 'Primary Bedroom', API_VERSION: '3.7.3-2640.0001', VERSION: '86.920.9.3-2' } }] });
       case 'PUT /pairing/start': return ok({ ITEM: { PAIRING_REQ_TOKEN: 123, CHALLENGE_TYPE: 1 } });
       case 'PUT /pairing/pair': return b.RESPONSE_VALUE === '1234' ? ok({ ITEM: { AUTH_TOKEN: 'tok-abc' } }) : { status: 200, body: JSON.stringify({ STATUS: { RESULT: 'INVALID_PIN' } }) };
     }
@@ -49,6 +49,8 @@ describe('VizioAdapter', () => {
     const info = await a.getDeviceInfo();
     expect(info.model).toBe('W4K65M-1031');
     expect(info.firmware).toBe('86.920.9.3-2');
+    expect(info.name).toBe('Primary Bedroom');
+    expect(info.apiVersion).toBe('3.7.3-2640.0001');
     expect(tv.calls.every((c) => c.auth === 'tok')).toBe(true);
   });
 

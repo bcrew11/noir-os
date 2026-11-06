@@ -92,10 +92,12 @@ export class VizioAdapter implements TVAdapter {
     const v = (items(r)[0]?.VALUE ?? {}) as Item;
     this.confirmed.add('stateReadback');
     return {
-      name: str(v.NAME) ?? str(v.FRIENDLY_NAME) ?? 'VIZIO OS TV',
+      // Confirmed on onn W4K65M-1031 / API 3.7.3: the user-facing TV name is CAST_NAME.
+      name: str(v.CAST_NAME) ?? str(v.NAME) ?? str(v.FRIENDLY_NAME) ?? 'VIZIO OS TV',
       manufacturer: 'VIZIO OS',
       model: str(v.MODEL_NAME) ?? str(v.MODEL),
-      firmware: str(v.VERSION) ?? str(v.FW_VERSION) ?? str(v.SYSTEM_VERSION),
+      firmware: str(v.VERSION) ?? str(v.FW_VERSION) ?? str(v.SYSTEM_VERSION) ?? str(v.SW_VERSION),
+      apiVersion: str(v.API_VERSION),
       serial: str(v.SERIAL_NUMBER),
       address: this.client.host,
       port: this.client.port,

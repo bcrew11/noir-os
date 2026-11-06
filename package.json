@@ -15,7 +15,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test --trace off",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "tv:probe": "npm run probe -w @noir/server --",
+    "tv:report": "npm run report -w @noir/server"
   },
   "engines": {
     "node": ">=22.13"

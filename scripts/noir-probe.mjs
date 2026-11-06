@@ -44,7 +44,7 @@ function ssdp(ms = 3000) {
       if (!found.has(r.address)) found.set(r.address, { loc, server });
     });
     sock.on('error', () => {});
-    sock.bind(() => { try { sock.send(msg, 1900, '239.255.255.250'); setTimeout(() => sock.send(msg, 1900, '239.255.255.250'), 700); } catch {} });
+    sock.bind(() => { try { sock.send(msg, 1900, '239.255.255.250'); setTimeout(() => sock.send(msg, 1900, '239.255.255.250'), 700); } catch { /* multicast unavailable */ } });
     setTimeout(async () => {
       sock.close();
       const list = [];

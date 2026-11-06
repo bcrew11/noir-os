@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch --clear-screen=false --env-file-if-exists=../../.env src/index.ts",
     "start": "NODE_ENV=production tsx --env-file-if-exists=../../.env src/index.ts",
-    "probe": "tsx src/cli/probe.ts"
+    "probe": "tsx src/cli/probe.ts",
+    "report": "tsx --env-file-if-exists=../../.env src/cli/report.ts"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.6",

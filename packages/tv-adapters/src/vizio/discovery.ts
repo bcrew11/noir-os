@@ -1,5 +1,6 @@
 import dgram from 'node:dgram';
 import http from 'node:http';
+import https from 'node:https';
 import os from 'node:os';
 import tls from 'node:tls';
 
@@ -114,8 +115,37 @@ export async function subnetScan(concurrency = 48, timeoutMs = 500): Promise<Dis
   return out;
 }
 
+/**
+ * Device info is readable without pairing (confirmed on onn W4K65M-1031, API 3.7.3), which lets
+ * discovery show the model and the TV's own name before the user pairs.
+ */
+export function readPublicDeviceInfo(host: string, port: number, timeoutMs = 2500): Promise<{ name?: string; model?: string } | null> {
+  return new Promise((resolve) => {
+    const req = https.request({ host, port, path: '/state/device/deviceinfo', method: 'GET', rejectUnauthorized: false, timeout: timeoutMs }, (res) => {
+      let body = '';
+      res.on('data', (c: Buffer) => { body += c.toString(); });
+      res.on('end', () => {
+        try {
+          const v = (JSON.parse(body) as { ITEMS?: Array<{ VALUE?: Record<string, unknown> }> }).ITEMS?.[0]?.VALUE ?? {};
+          resolve({ name: typeof v.CAST_NAME === 'string' ? v.CAST_NAME : undefined, model: typeof v.MODEL_NAME === 'string' ? v.MODEL_NAME : undefined });
+        } catch { resolve(null); }
+      });
+    });
+    req.on('timeout', () => req.destroy());
+    req.on('error', () => resolve(null));
+    req.end();
+  });
+}
+
 export async function discoverTVs(opts: { scan?: boolean } = {}): Promise<DiscoveredTV[]> {
-  const ssdp = await ssdpDiscover();
-  if (ssdp.length || !opts.scan) return ssdp;
-  return subnetScan();
+  // SSDP alone may miss the TV (it did on the onn W4K65M — only the router and a Roku answered),
+  // so fall back to the port scan whenever SSDP finds nothing with an open SmartCast port.
+  const ssdp = (await ssdpDiscover()).filter((t) => t.port);
+  const found = ssdp.length || !opts.scan ? ssdp : await subnetScan();
+  await Promise.all(found.map(async (t) => {
+    if (!t.port) return;
+    const info = await readPublicDeviceInfo(t.host, t.port);
+    if (info) { t.name = info.name ?? t.name; t.model = info.model ?? t.model; }
+  }));
+  return found;
 }
