@@ -12,7 +12,8 @@ import { FButton, FRow, Pill, Toggle, cx } from '../components/primitives.tsx';
 import { useFocusable } from '../focus/focus.ts';
 import { useScreenFocus } from '../hooks/useScreenFocus.ts';
 import { widgetInput } from '../lib/apps.ts';
-import { androidBridge, installedApps, isStandalone } from '../lib/android.ts';
+import { androidBridge, installedApps, isStandalone, readUpdateStatus } from '../lib/android.ts';
+import { useUpdateStatus } from '../hooks/useUpdate.ts';
 import { useUI } from '../store/ui.ts';
 
 const SECTIONS = [
@@ -304,6 +305,29 @@ function AmbientSection({ s }: { s: NoirState }) {
   );
 }
 
+/** Self-update controls (Android TV launcher only). */
+function UpdateGroup() {
+  const u = useUpdateStatus(1500);
+  if (!u) return null;
+  const busy = u.state === 'checking' || u.state === 'downloading' || u.state === 'installing';
+  const title = {
+    idle: 'Check for updates', disabled: 'Automatic updates are off', checking: 'Checking for updates…', current: 'NOIR is up to date',
+    available: `Install NOIR ${u.latestVersion}`, downloading: `Downloading… ${u.progress}%`, installing: 'Waiting for Android to install…',
+    installed: 'Update installed', error: 'Update problem',
+  }[u.state];
+  const hint = u.state === 'available' ? (u.notes || 'A new version is ready. Android will ask you to confirm.')
+    : u.state === 'error' ? u.error ?? undefined
+    : u.state === 'disabled' ? 'This build has no update source configured.'
+    : `Installed: ${u.currentVersion}. NOIR checks automatically every few hours.`;
+  return (
+    <Group title="Updates">
+      <FRow id="sy-update" icon={Download} title={title} hint={hint} disabled={busy || u.state === 'disabled'}
+        right={u.state === 'available' ? <Pill tone="accent">New</Pill> : undefined}
+        onSelect={() => (u.state === 'available' || (u.state === 'error' && u.latestVersion) ? androidBridge()?.installUpdate?.() : androidBridge()?.checkForUpdate?.())} />
+    </Group>
+  );
+}
+
 function SystemSection({ s }: { s: NoirState }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [diag, setDiag] = useState<Record<string, unknown> | null>(null);
@@ -319,17 +343,18 @@ function SystemSection({ s }: { s: NoirState }) {
         <FRow id="sy-auto" icon={Power} title="Switch to NOIR when the TV turns on" hint="NOIR watches the TV over Wi‑Fi and selects its input at power-on. Requires a paired TV."
           right={<Toggle on={sys.autoSwitchOnPowerOn} />} disabled={!sys.noirInputId} onSelect={() => void patchSettings({ system: { autoSwitchOnPowerOn: !sys.autoSwitchOnPowerOn } })} />
       </Group>}
+      <UpdateGroup />
       <Group title="About">
-        <FRow id="sy-ver" icon={Cpu} title="NOIR version" value={s.version} />
+        <FRow id="sy-ver" icon={Cpu} title="NOIR version" value={(standalone && readUpdateStatus()?.currentVersion) || s.version} />
         <FRow id="sy-mode" title="Deployment" value={deploymentLabel} />
-        <FRow id="sy-diag" icon={Activity} title="Connection diagnostics" onSelect={() => void api<Record<string, unknown>>('/api/diagnostics').then(setDiag)} />
-        <FRow id="sy-refresh" icon={RefreshCw} title="Refresh TV state, logos and photos" onSelect={() => void api('/api/tv/refresh', { body: {} }).then(() => pushToast({ tone: 'success', title: 'Refreshed' }))} />
+        {!standalone && <FRow id="sy-diag" icon={Activity} title="Connection diagnostics" onSelect={() => void api<Record<string, unknown>>('/api/diagnostics').then(setDiag)} />}
+        {!standalone && <FRow id="sy-refresh" icon={RefreshCw} title="Refresh TV state, logos and photos" onSelect={() => void api('/api/tv/refresh', { body: {} }).then(() => pushToast({ tone: 'success', title: 'Refreshed' }))} />}
       </Group>
       <Group title="Recovery">
         <FRow id="sy-recover" icon={LifeBuoy} title="Getting back to the standard interface" hint={standalone
           ? 'NOIR never modifies your TV. To use the Google TV home again, open Android settings → Apps → NOIR → Uninstall, or see docs/DEPLOYMENT.md (Recovery).'
           : 'NOIR never modifies your TV. Press the Home button on the TV remote, or switch inputs, to return to VIZIO OS at any time.'} />
-        <FRow id="sy-reset" icon={RotateCcw} title="Reset preferences" hint="Restores default settings. Pairings are kept." onSelect={() => setConfirmReset(true)} />
+        <FRow id="sy-reset" icon={RotateCcw} title="Reset preferences" hint={standalone ? 'Restores default settings. Installed apps are not affected.' : 'Restores default settings. Pairings are kept.'} onSelect={() => setConfirmReset(true)} />
       </Group>
       <AnimatePresence>
         {confirmReset && (

@@ -13,6 +13,25 @@ export interface AndroidBridge {
   nowPlaying(): string;
   openNotificationAccess(): boolean;
   openSystemSettings(): void;
+  updateStatus?(): string;
+  checkForUpdate?(): void;
+  installUpdate?(): void;
+}
+
+export interface UpdateStatus {
+  state: 'idle' | 'disabled' | 'checking' | 'current' | 'available' | 'downloading' | 'installing' | 'installed' | 'error';
+  currentVersion: string;
+  latestVersion: string | null;
+  notes: string | null;
+  progress: number;
+  error: string | null;
+}
+
+export function readUpdateStatus(): UpdateStatus | null {
+  try {
+    const raw = androidBridge()?.updateStatus?.();
+    return raw ? (JSON.parse(raw) as UpdateStatus) : null;
+  } catch { return null; }
 }
 
 export const androidBridge = (): AndroidBridge | undefined => (globalThis as { NoirAndroid?: AndroidBridge }).NoirAndroid;

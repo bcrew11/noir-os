@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertTriangle, CheckCircle2, FlaskConical, Gamepad2, Grid2x2, Home, Info, Monitor, MountainSnow, Music2, Settings, Tv, Wifi, WifiOff, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, FlaskConical, Gamepad2, Grid2x2, Home, Info, Monitor, MountainSnow, Music2, Settings, Tv, Wifi, WifiOff, XCircle } from 'lucide-react';
 import { formatClock, type InputIcon } from '@noir/core';
 import { useNoir, useNow } from '@noir/ui';
 import { Camera, Disc3, Laptop, Speaker, Cast } from 'lucide-react';
@@ -8,6 +8,7 @@ import { useMotion } from '../hooks/useMotion.ts';
 import { useUI, type Screen } from '../store/ui.ts';
 import { cx, focusTransition } from './primitives.tsx';
 import { useEffect } from 'react';
+import { useUpdateStatus } from '../hooks/useUpdate.ts';
 
 export const INPUT_ICON: Record<InputIcon, typeof Tv> = {
   console: Monitor, gamepad: Gamepad2, computer: Laptop, streaming: Cast, tv: Tv, disc: Disc3, speaker: Speaker, camera: Camera,
@@ -50,6 +51,7 @@ export function Header() {
       </div>
       <div className="flex items-center gap-6">
         <DemoBadge />
+        <UpdateBadge />
         <div className="flex items-center gap-2.5 text-fg-muted" title={statusLabel}>
           {(standalone ? navigator.onLine : linkOk && tvOk) ? <Wifi className="size-6" strokeWidth={1.75} /> : <WifiOff className="size-6 text-amber-300/90" strokeWidth={1.75} />}
           <span className="text-[1rem]">{statusLabel}</span>
@@ -64,6 +66,18 @@ export function Header() {
         </motion.button>
       </div>
     </header>
+  );
+}
+
+/** Shown when the Android launcher has found a newer NOIR release. */
+function UpdateBadge() {
+  const u = useUpdateStatus();
+  if (!u || (u.state !== 'available' && u.state !== 'downloading' && u.state !== 'installing')) return null;
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-highlight/40 bg-primary/20 px-3.5 py-1.5 text-[0.95rem] font-medium text-fg">
+      <Download className="size-4.5" strokeWidth={2} />
+      {u.state === 'available' ? `Update ${u.latestVersion} · Settings → System` : u.state === 'downloading' ? `Downloading update ${u.progress}%` : 'Installing update…'}
+    </span>
   );
 }
 

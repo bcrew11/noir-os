@@ -10,9 +10,13 @@ val signingProps = Properties().apply {
     val f = rootProject.file("signing.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
-// versionCode must increase with every release; CI/scripts pass -PnoirVersionCode / -PnoirVersionName.
-val noirVersionCode = (findProperty("noirVersionCode") as String?)?.toInt() ?: 2
-val noirVersionName = (findProperty("noirVersionName") as String?) ?: "0.2.0"
+// Version + update source live in ../noir.properties (bumped by scripts/release-android.sh).
+val noirProps = Properties().apply { rootProject.file("noir.properties").inputStream().use { load(it) } }
+val noirVersionCode = noirProps.getProperty("versionCode").toInt()
+val noirVersionName: String = noirProps.getProperty("versionName")
+val noirUpdateRepo: String = noirProps.getProperty("updateRepo", "").trim()
+// The newest release's manifest; GitHub redirects /latest/download/ to the most recent release.
+val noirUpdateUrl = if (noirUpdateRepo.isEmpty()) "" else "https://github.com/$noirUpdateRepo/releases/latest/download/noir-update.json"
 
 android {
     namespace = "app.noir.launcher"
@@ -23,7 +27,9 @@ android {
         targetSdk = 35
         versionCode = noirVersionCode
         versionName = noirVersionName
+        buildConfigField("String", "UPDATE_URL", "\"$noirUpdateUrl\"")
     }
+    buildFeatures { buildConfig = true }
     signingConfigs {
         create("noir") {
             if (signingProps.isNotEmpty()) {

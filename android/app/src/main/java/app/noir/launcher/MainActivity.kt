@@ -75,6 +75,7 @@ class MainActivity : Activity() {
             }
         }
         setContentView(web)
+        Updater.check()
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         load()
@@ -100,6 +101,11 @@ class MainActivity : Activity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Updater.check() // at most every 6 hours
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -222,6 +228,15 @@ class MainActivity : Activity() {
             runOnUiThread { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             true
         } catch (e: Exception) { false }
+
+        @JavascriptInterface
+        fun updateStatus(): String = Updater.status().toString()
+
+        @JavascriptInterface
+        fun checkForUpdate() = Updater.check(force = true)
+
+        @JavascriptInterface
+        fun installUpdate() = Updater.install(this@MainActivity)
 
         @JavascriptInterface
         fun openSystemSettings() {
