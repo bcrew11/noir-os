@@ -6,6 +6,9 @@
  */
 export const SOUND_STYLES = {
   off: 'Off',
+  thock: 'Thock',
+  tactile: 'Tactile',
+  creamy: 'Creamy',
   tick: 'Soft tick',
   glass: 'Glass',
   wood: 'Wood',
@@ -17,6 +20,9 @@ export type SoundKind = 'move' | 'select' | 'back';
 
 export const SOUND_HINTS: Record<SoundStyle, string> = {
   off: 'No sounds.',
+  thock: 'Deep, smooth keyboard thock — a lubed linear switch in a heavy case.',
+  tactile: 'Crisper keyboard clack with a little bump before bottoming out.',
+  creamy: 'Soft, muted keyboard press — the gentlest of the three.',
   tick: 'A short, soft click — like a premium watch crown.',
   glass: 'A tiny bell-like ping; select rises, back falls.',
   wood: 'A warm, muted knock.',
@@ -45,7 +51,7 @@ function tone(ctx: Ctx, out: AudioNode, t: number, freq: number, peak: number, d
 }
 
 let noiseBuf: AudioBuffer | null = null;
-function noise(ctx: Ctx, out: AudioNode, t: number, peak: number, decay: number, filter: { type: BiquadFilterType; freq: number; q?: number }) {
+function noise(ctx: Ctx, out: AudioNode, t: number, peak: number, decay: number, filter: { type: BiquadFilterType; freq: number; q?: number }, attack = 0.001, lowpass?: number) {
   if (!noiseBuf || noiseBuf.sampleRate !== ctx.sampleRate) {
     noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.2), ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -57,14 +63,19 @@ function noise(ctx: Ctx, out: AudioNode, t: number, peak: number, decay: number,
   const f = ctx.createBiquadFilter();
   f.type = filter.type; f.frequency.value = filter.freq; f.Q.value = filter.q ?? 1;
   const g = ctx.createGain();
-  env(ctx, g, t, peak, 0.001, decay);
-  src.connect(f).connect(g).connect(out);
+  env(ctx, g, t, peak, attack, decay);
+  // Optional second filter rounds off the top end (what makes a click "soft" rather than sharp).
+  if (lowpass) {
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = lowpass; lp.Q.value = 0.7;
+    src.connect(f).connect(lp).connect(g).connect(out);
+  } else src.connect(f).connect(g).connect(out);
   src.start(t);
   src.stop(t + decay + 0.02);
 }
 
 /** Per-style level trim so every style sounds about equally loud (measured peaks, ~0.3). */
-const STYLE_TRIM: Record<SoundStyle, number> = { off: 0, tick: 1.75, glass: 3, wood: 1.1, bubble: 1.5, felt: 0.95 };
+const STYLE_TRIM: Record<SoundStyle, number> = { off: 0, thock: 0.68, tactile: 0.72, creamy: 0.64, tick: 1.75, glass: 3, wood: 1.1, bubble: 1.5, felt: 0.95 };
 
 /** Schedule one sound on any (online or offline) audio context. */
 export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: SoundKind, t = ctx.currentTime) {
@@ -73,6 +84,36 @@ export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: 
   out.gain.value = STYLE_TRIM[style];
   out.connect(dest);
   switch (style) {
+    /*
+     * Keyboard-style sounds are three layers, like a real switch:
+     *   body     – low, rounded resonance of keycap + case ("thock")
+     *   clack    – muffled bottom-out transient (band-passed, then low-passed so it isn't sharp)
+     *   upstroke – a much smaller click ~45ms later as the key returns
+     * select = heavier press, back = lower and a touch softer.
+     */
+    case 'thock': {
+      const body = [175, 150, 130][k]!;
+      tone(ctx, out, t, body, [0.42, 0.5, 0.4][k]!, [0.055, 0.07, 0.06][k]!, { to: body * 0.72, glide: 0.035, attack: 0.003 });
+      tone(ctx, out, t, body * 2.4, 0.1, 0.03, { attack: 0.002 });
+      noise(ctx, out, t, [0.34, 0.4, 0.3][k]!, 0.022, { type: 'bandpass', freq: 1150, q: 0.8 }, 0.0025, 2200);
+      noise(ctx, out, t + 0.045, 0.08, 0.012, { type: 'bandpass', freq: 1700, q: 1 }, 0.002, 2600);
+      break;
+    }
+    case 'tactile': {
+      const body = [260, 230, 200][k]!;
+      noise(ctx, out, t, 0.12, 0.008, { type: 'bandpass', freq: 1600, q: 1.2 }, 0.0015, 3000); // tactile bump
+      tone(ctx, out, t + 0.012, body, [0.3, 0.38, 0.3][k]!, 0.045, { to: body * 0.75, glide: 0.03, attack: 0.002 });
+      noise(ctx, out, t + 0.012, [0.38, 0.44, 0.34][k]!, 0.018, { type: 'bandpass', freq: 2000, q: 1.1 }, 0.0015, 3200);
+      noise(ctx, out, t + 0.06, 0.09, 0.012, { type: 'bandpass', freq: 2200, q: 1.1 }, 0.0015, 3200);
+      break;
+    }
+    case 'creamy': {
+      const body = [210, 185, 160][k]!;
+      tone(ctx, out, t, body, [0.34, 0.42, 0.32][k]!, [0.05, 0.065, 0.055][k]!, { to: body * 0.8, glide: 0.04, attack: 0.004 });
+      noise(ctx, out, t, [0.3, 0.36, 0.26][k]!, 0.03, { type: 'lowpass', freq: 1300, q: 0.7 }, 0.004);
+      noise(ctx, out, t + 0.05, 0.06, 0.015, { type: 'lowpass', freq: 1700, q: 0.7 }, 0.003);
+      break;
+    }
     case 'tick': {
       const f = [2400, 2000, 1500][k]!;
       noise(ctx, out, t, [0.22, 0.3, 0.22][k]!, 0.012, { type: 'bandpass', freq: 3200, q: 1.4 });
