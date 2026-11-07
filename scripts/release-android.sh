@@ -40,8 +40,7 @@ const m = { versionCode: Number(code), versionName: name, sha256: sha, notes, pu
   apkUrl: `https://raw.githubusercontent.com/${repo}/${branch}/${apk}` };
 require("fs").writeFileSync(out, JSON.stringify(m, null, 2) + "\n");
 ' "$CODE" "$NAME" "$REPO" "$BRANCH" "$APK" "$SHA" "$NOTES" "$WT/noir-update.json"
-# Keep only the three newest APKs on the branch.
-(cd "$WT" && ls -1t noir-launcher-*.apk | tail -n +4 | xargs -r git rm -q --ignore-unmatch -- 2>/dev/null; ls -1t noir-launcher-*.apk | tail -n +4 | xargs -r rm -f)
+# Older APKs stay published: a launcher that last checked long ago may still ask for one.
 printf '# NOIR updates\n\nPublished builds of the NOIR Google TV launcher. Installed launchers read `noir-update.json`.\n\nLatest: **%s**\n' "$NAME" > "$WT/README.md"
 (cd "$WT" && git add -A && git -c user.name="NOIR release" -c user.email="noreply@noir.local" commit -qm "NOIR $NAME" && git push -q origin "HEAD:$BRANCH")
 git worktree remove --force "$WT" >/dev/null 2>&1 || true

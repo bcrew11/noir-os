@@ -49,11 +49,7 @@ object Updater {
         state = "checking"; error = null
         Thread {
             try {
-                val json = JSONObject(httpText(BuildConfig.UPDATE_URL))
-                val r = Release(
-                    json.getInt("versionCode"), json.getString("versionName"), json.getString("apkUrl"),
-                    json.getString("sha256").lowercase(), json.optString("notes", ""),
-                )
+                val r = fetchRelease()
                 latest = r
                 state = if (r.versionCode > BuildConfig.VERSION_CODE) "available" else "current"
                 lastCheck = System.currentTimeMillis()
@@ -63,9 +59,17 @@ object Updater {
         }.start()
     }
 
+    private fun fetchRelease(): Release {
+        val json = JSONObject(httpText(BuildConfig.UPDATE_URL))
+        return Release(
+            json.getInt("versionCode"), json.getString("versionName"), json.getString("apkUrl"),
+            json.getString("sha256").lowercase(), json.optString("notes", ""),
+        )
+    }
+
     /** Download, verify and hand the APK to Android's installer (which asks the user to confirm). */
     fun install(ctx: Context) {
-        val r = latest ?: return
+        if (latest == null) return
         if (state != "available" && state != "error") return
         if (Build.VERSION.SDK_INT >= 26 && !ctx.packageManager.canRequestPackageInstalls()) {
             error = "Allow NOIR to install updates: Settings → Apps → Security & restrictions → Unknown sources → NOIR. Then try again."
@@ -78,6 +82,10 @@ object Updater {
         state = "downloading"; progress = 0; error = null
         Thread {
             try {
+                // Always install the newest release, not the one remembered from the last check
+                // (that file may be hours old, and older APKs can be gone).
+                val r = fetchRelease().also { latest = it; lastCheck = System.currentTimeMillis() }
+                if (r.versionCode <= BuildConfig.VERSION_CODE) { state = "current"; return@Thread }
                 val file = File(ctx.cacheDir, "noir-update.apk")
                 download(r.apkUrl, file)
                 if (sha256(file) != r.sha256) throw IllegalStateException("The download didn't match the published checksum.")
