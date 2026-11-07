@@ -151,6 +151,10 @@ function HomeSection({ s }: { s: NoirState }) {
       <Group title="Layout">
         <FRow id="hm-greet" title="Greeting" right={<Toggle on={h.showGreeting} />} onSelect={() => set({ showGreeting: !h.showGreeting })} />
         <FRow id="hm-music" title="Music widget" right={<Toggle on={h.showMusicWidget} />} onSelect={() => set({ showMusicWidget: !h.showMusicWidget })} />
+        <FRow id="hm-nowplaying" icon={Music2} title="Now Playing view" hint="While music plays and Home is left alone, switch to a full-screen music view. Any button returns."
+          value={<PickerValue>{h.nowPlayingAfterSec ? `After ${h.nowPlayingAfterSec < 60 ? `${h.nowPlayingAfterSec} sec` : `${h.nowPlayingAfterSec / 60} min`}` : 'Off'}</PickerValue>}
+          onSelect={() => pickList('Now Playing view', String(h.nowPlayingAfterSec), [0, 10, 20, 45, 120].map((n) => ({ value: String(n), label: n === 0 ? 'Off' : n < 60 ? `After ${n} seconds` : `After ${n / 60} minutes` })),
+            (v) => set({ nowPlayingAfterSec: Number(v) }))} />
         <FRow id="hm-input" title="Input widget" right={<Toggle on={h.showInputWidget} />} onSelect={() => set({ showInputWidget: !h.showInputWidget })} />
         <FRow id="hm-input-id" title="Input shown on Home"
           value={h.widgetInputId ? `${h.widgetInputId.replace('-', ' ')} · ${s.settings.inputs[h.widgetInputId]?.label ?? s.tv.inputs.find((i) => i.id === h.widgetInputId)?.systemName ?? ''}` : `Automatic (${widgetInput(s).replace('-', ' ')})`}

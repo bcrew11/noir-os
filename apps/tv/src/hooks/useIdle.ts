@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNoir } from '@noir/ui';
 import { useUI } from '../store/ui.ts';
 
@@ -13,4 +13,24 @@ export function useIdle() {
     }, 15_000);
     return () => clearInterval(id);
   }, [minutes]);
+}
+
+/**
+ * Home's music view: true when music is playing, Home is showing, and the remote has been idle for
+ * `home.nowPlayingAfterSec`. Returns [active, exit]. Exits automatically when the music stops.
+ */
+export function useNowPlayingIdle(): [boolean, () => void] {
+  const after = useNoir((s) => s.state?.settings.home.nowPlayingAfterSec ?? 0);
+  const playing = useNoir((s) => !!(s.state?.music.isPlaying && s.state.music.track));
+  const screen = useUI((s) => s.screen);
+  const [active, setActive] = useState(false);
+  const exit = useCallback(() => setActive(false), []);
+  useEffect(() => {
+    if (!after || !playing || screen !== 'home') { setActive(false); return; }
+    const id = setInterval(() => {
+      if (Date.now() - useUI.getState().lastActivity > after * 1000) setActive(true);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [after, playing, screen]);
+  return [active, exit];
 }

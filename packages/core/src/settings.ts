@@ -59,6 +59,8 @@ export const SettingsSchema = z.object({
     showGreeting: z.boolean().default(true),
     showMusicWidget: z.boolean().default(true),
     showInputWidget: z.boolean().default(true),
+    /** Seconds of inactivity on Home, while music plays, before the Now Playing view appears (0 = never). */
+    nowPlayingAfterSec: z.number().int().min(0).max(600).default(20),
     /** Input featured on the home widget; null = pick automatically (first HDMI source that isn't a soundbar). */
     widgetInputId: z.string().nullable().default(null),
   }).default({}),

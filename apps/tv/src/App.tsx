@@ -11,7 +11,8 @@ import { configureSound } from './lib/sound.ts';
 import { installInput, setInputExtras } from './focus/input.ts';
 import { screenTransition, useMotion } from './hooks/useMotion.ts';
 import { usePerformanceProbe } from './hooks/usePerformance.ts';
-import { useIdle } from './hooks/useIdle.ts';
+import { useIdle, useNowPlayingIdle } from './hooks/useIdle.ts';
+import { NowPlayingView } from './components/NowPlaying.tsx';
 import Home from './screens/Home.tsx';
 import { useUI } from './store/ui.ts';
 
@@ -30,6 +31,7 @@ export function App() {
   const motionLevel = useMotion();
   const lowPerf = usePerformanceProbe(state?.settings.appearance.performance ?? 'auto');
   useIdle();
+  const [nowPlaying, exitNowPlaying] = useNowPlayingIdle();
 
   useEffect(() => {
     connect('tv');
@@ -91,6 +93,9 @@ export function App() {
         </div>
         <Toasts />
       </div>
+      <AnimatePresence>
+        {nowPlaying && <NowPlayingView key="now-playing" onExit={exitNowPlaying} />}
+      </AnimatePresence>
       <AnimatePresence>
         {ambient && (
           <Suspense fallback={null}><Ambient key="ambient" /></Suspense>
