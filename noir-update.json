@@ -1,8 +1,8 @@
 {
-  "versionCode": 9,
-  "versionName": "0.4.1",
-  "sha256": "44f8d6746122acb12ad0167ee9b64867412e22c80ddbc1b4ded486658a8483ff",
-  "notes": "Remote buttons: make Free TV (or another shortcut button) toggle your lamp or open an app. Fixes clipped pop-ups and Up in the App Library.",
-  "publishedAt": "2026-11-07T00:46:36.198Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.4.1.apk"
+  "versionCode": 10,
+  "versionName": "0.4.2",
+  "sha256": "121e68eb6fdde674a3cad821ee0d28ea5a2bcd740c615b3f90a3748c8c8e8bc9",
+  "notes": "Smoother navigation; adds Settings → System → Show frame rate.",
+  "publishedAt": "2026-11-07T00:54:09.302Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.4.2.apk"
 }
