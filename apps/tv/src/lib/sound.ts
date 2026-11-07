@@ -89,9 +89,9 @@ function noise(ctx: Ctx, out: AudioNode, t: number, peak: number, decay: number,
 }
 
 /** A short feedback echo (low-passed), returned as an input node: gives soft sounds some space. */
-function echo(ctx: Ctx, out: AudioNode, time: number, feedback: number): AudioNode {
+function echo(ctx: Ctx, out: AudioNode, time: number, feedback: number, level = 0.35): AudioNode {
   const input = ctx.createGain();
-  input.gain.value = 0.35;
+  input.gain.value = level;
   const d = ctx.createDelay(0.5);
   d.delayTime.value = time;
   const fb = ctx.createGain();
@@ -237,7 +237,7 @@ export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: 
      * Select rises into a second, sustained note; back glides down.
      */
     case 'hud': {
-      const wet = echo(ctx, out, 0.075, 0.28);
+      const wet = echo(ctx, out, 0.06, 0.1, 0.14); // just a hint of space
       const note = (at: number, f: number, to: number, p: number, d: number) => {
         smooth(ctx, out, wet, at, f, to, p, 0.008, d);
         smooth(ctx, out, wet, at, f * 1.006, to * 1.006, p * 0.6, 0.008, d);
