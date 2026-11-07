@@ -1,4 +1,4 @@
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { formatClock, formatDuration } from '@noir/core';
 import { useMusicProgress, useNoir, useNow } from '@noir/ui';
@@ -12,10 +12,14 @@ import { Artwork } from './widgets.tsx';
  * Tiny version of the artwork (8×8), stretched to fill the screen: the browser's smooth upscaling
  * gives a soft, blurred colour wash for free — no blur filter, so it costs nothing on a stick.
  */
+/** Survives remounts of the view, so the light doesn't start from nothing each time it opens. */
+let lastWash: string | null = null;
+
 function useArtWash(url?: string): string | null {
-  const [wash, setWash] = useState<string | null>(null);
+  // The previous colours stay until the new ones are ready (no flash back to the fallback).
+  const [wash, setWash] = useState<string | null>(lastWash);
   useEffect(() => {
-    if (!url) { setWash(null); return; }
+    if (!url) return;
     let alive = true;
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -24,10 +28,11 @@ function useArtWash(url?: string): string | null {
         const c = document.createElement('canvas');
         c.width = 8; c.height = 8;
         c.getContext('2d')!.drawImage(img, 0, 0, 8, 8);
-        if (alive) setWash(c.toDataURL());
-      } catch { if (alive) setWash(null); } // cross-origin art without CORS: fall back to the gradient
+        const next = c.toDataURL();
+        lastWash = next;
+        if (alive) setWash(next);
+      } catch { /* cross-origin art without CORS: keep the current light */ }
     };
-    img.onerror = () => alive && setWash(null);
     img.src = url;
     return () => { alive = false; };
   }, [url]);
@@ -65,9 +70,18 @@ export function NowPlayingView({ onExit }: { onExit: () => void }) {
   return (
     <motion.div className={`absolute inset-0 z-30 overflow-hidden ${dark ? 'bg-black' : 'bg-ink-900'}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: level === 'off' ? 0 : 0.6 }} onClick={onExit}>
-      {dark ? null : wash
-        ? <img src={wash} alt="" aria-hidden className="absolute inset-0 size-full scale-110 object-cover opacity-70" style={{ imageRendering: 'auto' }} />
-        : <div aria-hidden className="absolute inset-0" style={{ background: 'radial-gradient(70% 70% at 30% 40%, color-mix(in srgb, var(--noir-primary) 45%, transparent), transparent 70%)' }} />}
+      {!dark && (
+        <>
+          <div aria-hidden className="absolute inset-0" style={{ background: 'radial-gradient(70% 70% at 30% 40%, color-mix(in srgb, var(--noir-primary) 45%, transparent), transparent 70%)' }} />
+          {/* New album colours crossfade over the old ones (opacity only: cheap on a stick). */}
+          <AnimatePresence initial={false}>
+            {wash && (
+              <motion.img key={wash} src={wash} alt="" aria-hidden className="absolute inset-0 size-full scale-110 object-cover" style={{ imageRendering: 'auto' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 0.7 }} exit={{ opacity: 0 }} transition={{ duration: level === 'off' ? 0 : 1.6, ease: 'easeInOut' }} />
+            )}
+          </AnimatePresence>
+        </>
+      )}
       {!dark && <div aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(11,9,18,0.55), rgba(11,9,18,0.25) 50%, rgba(11,9,18,0.7)), linear-gradient(0deg, rgba(11,9,18,0.85), transparent 45%)' }} />}
 
       <div className={`absolute left-1/2 top-1/2 flex h-[67.5rem] w-[120rem] -translate-x-1/2 -translate-y-1/2 items-center gap-20 px-28 ${dark ? 'opacity-[0.82]' : ''}`}>
