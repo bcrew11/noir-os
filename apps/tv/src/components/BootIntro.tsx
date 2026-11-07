@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useNoir } from '@noir/ui';
 import { interceptNav } from '../focus/input.ts';
+import { androidBridge } from '../lib/android.ts';
 import type { MotionLevel } from '../hooks/useMotion.ts';
 
 /** Sparks that drift in and gather into the first point of light (angle in degrees, distance in rem). */
@@ -41,6 +43,20 @@ export function BootIntro({ level, onReveal, onDone }: { level: MotionLevel; onR
   const full = level === 'full';
   const total = full ? 6200 : 900;
   const slide = useRef<HTMLDivElement>(null);
+  const sound = useNoir((s) => s.state?.settings.sound);
+
+  // Start-up sound with the full animation (native on the stick; a plain <audio> elsewhere, which a
+  // browser may block until the page has been interacted with — that's fine).
+  useEffect(() => {
+    if (!full || !sound || sound.boot === false || sound.style === 'off') return;
+    const volume = Math.min(1, sound.volume * 1.1);
+    const bridge = androidBridge();
+    if (bridge?.playBootSound) { bridge.playBootSound(volume); return; }
+    const a = new Audio('boot-sound.m4a');
+    a.volume = volume;
+    void a.play().catch(() => {});
+    return () => a.pause();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once per launch
 
   // The mark ignites exactly where the point of light was (the screen centre), then glides into
   // its place beside the wordmark: measure how far that is.

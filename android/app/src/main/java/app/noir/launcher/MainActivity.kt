@@ -291,6 +291,27 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun phoneUrl(): String? = if (phoneServer == null) null else lanAddress()?.let { "http://$it:$phonePort/phone/" }
 
+        /** The start-up sound (pre-rendered, bundled with the page), played natively so autoplay rules don't apply. */
+        @JavascriptInterface
+        fun playBootSound(volume: Float) {
+            runOnUiThread {
+                try {
+                    val fd = assets.openFd("web/boot-sound.m4a")
+                    android.media.MediaPlayer().apply {
+                        setAudioAttributes(android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_GAME).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                        setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
+                        fd.close()
+                        val v = volume.coerceIn(0f, 1f)
+                        setVolume(v, v)
+                        setOnCompletionListener { it.release() }
+                        setOnErrorListener { mp, _, _ -> mp.release(); true }
+                        setOnPreparedListener { it.start() }
+                        prepareAsync() // off the UI thread: the animation's first frames aren't held up
+                    }
+                } catch (_: Exception) { /* no sound file or no audio: stay silent */ }
+            }
+        }
+
         @JavascriptInterface
         fun soundLoad(key: String, wavBase64: String) { try { sounds.load(key, wavBase64) } catch (_: Exception) { } }
 

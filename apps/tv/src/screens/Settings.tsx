@@ -124,6 +124,8 @@ function Appearance({ s }: { s: NoirState }) {
             onPreview: (v) => playSound('select', v as SoundStyle),
             onPick: (v) => void patchSettings({ sound: { style: v as SoundStyle } }),
           })} />
+        <FRow id="ap-boot-sound" icon={Volume2} title="Start-up sound" hint="Plays with NOIR’s start-up animation."
+          right={<Toggle on={s.settings.sound.boot} />} onSelect={() => void patchSettings({ sound: { boot: !s.settings.sound.boot } })} />
         <FRow id="ap-volume" icon={Volume2} title="Sound volume" disabled={s.settings.sound.style === 'off'}
           value={<PickerValue>{Math.round(s.settings.sound.volume * 100)}%</PickerValue>}
           onSelect={() => openPicker({

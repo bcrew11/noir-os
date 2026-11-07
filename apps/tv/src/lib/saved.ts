@@ -83,8 +83,9 @@ export function openSteps(url: string, appId: string | null, pkg: string | null)
       // `source=30` marks a launcher-style deep link. NEW_TASK | CLEAR_TASK (+ no-history) makes it
       // jump there even if Netflix is already open.
       const main = `${pkg}/.MainActivity`;
-      steps.push({ data: `netflix://title/${id}`, component: main, extras: { source: '30' }, flags: 0x10808000 });
+      // Confirmed on a Google TV stick: the https title link handed to MainActivity opens the show page.
       steps.push({ data: `https://www.netflix.com/title/${id}`, component: main, extras: { source: '30' }, flags: 0x10808000 });
+      steps.push({ data: `netflix://title/${id}`, component: main, extras: { source: '30' }, flags: 0x10808000 });
       steps.push({ data: `netflix://title/${id}`, pkg, extras: { source: '30' }, flags: 0x10008000 });
       steps.push({ data: `https://www.netflix.com/title/${id}`, pkg, extras: { source: '30' } });
     }

@@ -13,6 +13,7 @@ export interface AndroidBridge {
   /** Low-latency navigation sounds (native SoundPool). */
   soundLoad?(key: string, wavBase64: string): void;
   soundPlay?(key: string, volume: number): boolean;
+  playBootSound?(volume: number): void;
   nowPlaying(): string;
   openNotificationAccess(): boolean;
   openSystemSettings(): void;

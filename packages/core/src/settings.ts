@@ -83,6 +83,8 @@ export const SettingsSchema = z.object({
     /** Navigation sound style (see apps/tv/src/lib/sound.ts). */
     style: z.enum(['off', 'thock', 'tactile', 'creamy', 'tick', 'glass', 'wood', 'bubble', 'felt', 'hud', 'holo', 'scan', 'cosmic', 'custom']).default('tick'),
     volume: z.number().min(0.1).max(1).default(0.6),
+    /** Play the start-up sound with the boot animation. */
+    boot: z.boolean().default(true),
   }).default({}),
   music: z.object({
     provider: z.enum(['demo', 'spotify']).default('demo'),

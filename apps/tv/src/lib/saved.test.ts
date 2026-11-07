@@ -13,8 +13,7 @@ describe('watch later links', () => {
 
   it('opens Netflix titles on their page first, with plain links as fallbacks', () => {
     const steps = openSteps('https://www.netflix.com/title/80057281?s=i', 'netflix', 'com.netflix.ninja');
-    expect(steps[0]).toMatchObject({ data: 'netflix://title/80057281', component: 'com.netflix.ninja/.MainActivity', extras: { source: '30' } });
-    expect(steps.some((st) => st.data === 'https://www.netflix.com/title/80057281' && st.component)).toBe(true);
+    expect(steps[0]).toMatchObject({ data: 'https://www.netflix.com/title/80057281', component: 'com.netflix.ninja/.MainActivity', extras: { source: '30' } });
     expect(steps.at(-1)).toEqual({ data: 'https://www.netflix.com/title/80057281?s=i' });
   });
 

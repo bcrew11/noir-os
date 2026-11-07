@@ -198,7 +198,7 @@ try {
   await phone.getByRole('button', { name: /^Watch / }).first().click();
   await phone.waitForTimeout(500);
   const nf = (await tv.evaluate(() => window.__launched))[0];
-  check(nf === 'url:com.netflix.ninja:netflix://title/80057281', `Netflix opens on the title's page (${nf})`);
+  check(nf === 'url:com.netflix.ninja:https://www.netflix.com/title/80057281', `Netflix opens on the title's page (${nf})`);
   check(tvSaved2.length === 2 && tvSaved2[0].appId === 'netflix', 'TV has the Netflix link on top');
   // iPhone Shortcut: create a key from the phone, then POST a queued file the way Shortcuts will.
   await phone.getByRole('button', { name: /Save from anywhere/ }).click();
