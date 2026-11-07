@@ -12,6 +12,7 @@ import {
 import { setLocalBackend, useNoir } from '@noir/ui';
 import { androidBridge, installedApps, packageCache, type NowPlaying } from './lib/android.ts';
 import { allApps, launchApp } from './lib/apps.ts';
+import { loadSaved } from './lib/saved.ts';
 import { denyPairing, pairedPhones, phoneUrl, removePhone, startPhoneHost } from './phoneHost.ts';
 
 const SETTINGS_KEY = 'noir.settings';
@@ -118,6 +119,7 @@ export function startStandalone() {
     spotify: { configured: false, connected: false },
     weather: useNoir.getState().state?.weather ?? null,
     phones: pairedPhones(),
+    saved: loadSaved(),
   });
   const publish = () => useNoir.setState({ state: build(), status: 'online' });
 

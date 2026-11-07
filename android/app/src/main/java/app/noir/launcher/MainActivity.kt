@@ -344,6 +344,34 @@ class MainActivity : Activity() {
             }
         }
 
+        /** Title + thumbnail for a saved link (page metadata), fetched natively to avoid CORS. */
+        @JavascriptInterface
+        fun fetchMeta(callbackId: String, url: String) {
+            Thread {
+                val meta = try { LinkMeta.fetch(url) } catch (e: Exception) { JSONObject().put("error", e.message ?: "failed") }
+                val js = "window.__noirNative && window.__noirNative(${JSONObject.quote(callbackId)}, ${JSONObject.quote(meta.toString())}, null)"
+                runOnUiThread { web.evaluateJavascript(js, null) }
+            }.start()
+        }
+
+        /** Open a link in a specific app (falls back to whatever app handles it). */
+        @JavascriptInterface
+        fun openUrl(url: String, pkg: String?): String {
+            val uri = Uri.parse(url)
+            if (uri.scheme != "https" && uri.scheme != "http") return JSONObject(mapOf("ok" to false, "message" to "Not a web link")).toString()
+            val base = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val tries = listOfNotNull(pkg?.takeIf { it.isNotEmpty() }?.let { Intent(base).setPackage(it) }, base)
+            for (intent in tries) {
+                if (intent.resolveActivity(packageManager) != null) {
+                    return try {
+                        runOnUiThread { startActivity(intent) }
+                        JSONObject(mapOf("ok" to true, "message" to "Opened", "inApp" to (intent.`package` != null))).toString()
+                    } catch (e: Exception) { JSONObject(mapOf("ok" to false, "message" to (e.message ?: "Couldn't open it"))).toString() }
+                }
+            }
+            return JSONObject(mapOf("ok" to false, "message" to "No app on this device can open that link")).toString()
+        }
+
         @JavascriptInterface
         fun updateStatus(): String = Updater.status().toString()
 

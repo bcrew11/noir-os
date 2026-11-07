@@ -20,6 +20,9 @@ export interface AndroidBridge {
   goveeHasKey?(): boolean;
   goveeSetKey?(key: string): void;
   goveeRequest?(callbackId: string, method: string, path: string, body: string | null): void;
+  /** Watch later: page title/thumbnail (async, via __noirNative) and opening a link in an app. */
+  fetchMeta?(callbackId: string, url: string): void;
+  openUrl?(url: string, pkg: string | null): string;
   keyServiceEnabled?(): boolean;
   openAccessibilitySettings?(): boolean;
   learnKey?(callbackId: string): void;

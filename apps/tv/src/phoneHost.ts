@@ -8,10 +8,11 @@
  *     for a random token. Only a SHA-256 hash of each token is stored (localStorage).
  *   - every other request and socket must present a valid token.
  */
-import { CommandSchema, NAV_KEYS, type NavKey, type NoirState, type PairedPhone } from '@noir/core';
+import { extractUrl, CommandSchema, NAV_KEYS, type NavKey, type NoirState, type PairedPhone } from '@noir/core';
 import { command, emitRemoteNav, patchSettings, useNoir } from '@noir/ui';
 import { androidBridge } from './lib/android.ts';
 import { getPower, goveeHasKey, setPower } from './lib/govee.ts';
+import { addSaved, loadSaved, openSaved, removeSaved } from './lib/saved.ts';
 import { customSounds, playSound, setCustomSound, type SoundKind } from './lib/sound.ts';
 
 interface StoredPhone extends PairedPhone { hash: string }
@@ -148,6 +149,19 @@ async function handle(method: string, path: string, auth: string, body: string):
     const r = await setPower(l, want);
     if (r.status === 'verified') window.dispatchEvent(new CustomEvent('noir-light', { detail: { device: l.device, on: r.on } }));
     return [200, r];
+  }
+  if (p === '/api/saved' && method === 'GET') return [200, loadSaved()];
+  if (p === '/api/saved' && method === 'POST') {
+    const url = extractUrl(String(json().url ?? ''));
+    if (!url) return err(400, 'That doesn’t look like a link.');
+    return [200, addSaved(url)];
+  }
+  const sv = p.match(/^\/api\/saved\/([^/]+)(\/open)?$/);
+  if (sv) {
+    const item = loadSaved().find((s) => s.id === decodeURIComponent(sv[1]!));
+    if (!item) return err(404, 'That link isn’t saved any more.');
+    if (sv[2] && method === 'POST') return [200, openSaved(item)];
+    if (!sv[2] && method === 'DELETE') { removeSaved(item.id); return [200, { ok: true }]; }
   }
   if (p === '/api/sounds/custom' && method === 'GET') return [200, soundSlots()];
   const snd = p.match(/^\/api\/sounds\/custom\/(move|select|back)$/);

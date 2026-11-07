@@ -34,6 +34,8 @@ await tv.addInitScript((port) => {
     nowPlaying: () => '{"permission":true,"active":false}', openNotificationAccess: () => true, openSystemSettings: () => {},
     updateStatus: () => '{"state":"current","currentVersion":"x","latestVersion":"x","notes":null,"progress":0,"error":null}',
     phoneUrl: () => `http://127.0.0.1:${port}/phone/`,
+    fetchMeta: (cb) => setTimeout(() => window.__noirNative(cb, JSON.stringify({ title: 'Test Video Title', image: 'https://i.ytimg.com/vi/abc123def45/hqdefault.jpg' }), null), 50),
+    openUrl: (url, pkg) => { window.__launched.push(`url:${pkg}:${url}`); return '{"ok":true,"message":"Opened"}'; },
     phoneRespond: (id, status, body) => window.__respond(id, status, body),
     phoneSend: (cid, text) => window.__send(cid, text),
     phoneClose: (cid) => window.__close(cid),
@@ -43,6 +45,7 @@ await tv.addInitScript((port) => {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname.startsWith('/api/')) {
+    if (globalThis.__tvDown) { res.writeHead(504, { 'Content-Type': 'application/json' }).end('{"message":"NOIR didn\'t answer. Is NOIR open on the TV?"}'); return; }
     let body = '';
     for await (const c of req) body += c;
     const id = randomUUID();
@@ -111,10 +114,13 @@ try {
     await phone.reload();
   }
   await phone.getByText('Connected').waitFor({ timeout: 8000 });
+  // Pages live in the sidebar (closed by default).
+  const tab = async (name) => { await phone.getByRole('button', { name: 'Menu', exact: true }).click(); await phone.locator('nav').getByRole('button', { name }).click(); await phone.getByRole('button', { name: 'Close menu' }).waitFor({ state: 'detached' }); };
+  check(await phone.getByRole('button', { name: 'Play/Pause' }).first().isVisible(), 'mini player visible');
   check(true, 'phone connected over WebSocket');
   check(!(await phone.getByText('Control TV apps').isVisible()), 'TV-only remote target hidden');
   check(!(await phone.getByLabel('Volume up').isVisible()), 'volume/power hidden');
-  check(await phone.getByText('Google TV app').isVisible(), 'Google TV app hint shown');
+  check(!(await phone.getByText('Google TV app').isVisible()), 'Google TV app note removed');
   const tvPhones = await tv.evaluate(() => JSON.parse(localStorage.getItem('noir.phones') ?? '[]'));
   check(tvPhones.length === 1 && !('token' in tvPhones[0]) && /^[0-9a-f]{64}$/.test(tvPhones[0].hash), 'TV stores only a token hash');
 
@@ -127,18 +133,18 @@ try {
   check(!!after && before !== after, 'phone D-pad moves focus on the TV');
 
   // Settings change from the phone reaches the TV (and is saved on the device).
-  await phone.getByRole('button', { name: 'Customize' }).click();
+  await tab('Customize');
   await phone.getByRole('button', { name: 'Thock' }).click();
   await tv.waitForFunction(() => JSON.parse(localStorage.getItem('noir.settings') ?? '{}').sound?.style === 'thock', null, { timeout: 4000 }).then(() => check(true, 'phone setting saved on TV'), () => check(false, 'phone setting saved on TV'));
   check(!(await phone.getByText('Custom shortcut').isVisible()), 'custom shortcut (server-only) hidden');
 
   // Settings change on the TV is pushed to the phone.
-  await phone.getByRole('button', { name: 'Devices' }).click();
+  await tab('Devices');
   check(await phone.getByText('NOIR on Google TV').isVisible(), 'Devices tab shows on-device mode');
   check(await phone.getByText('iPhone').first().isVisible(), 'paired phone listed');
 
   // App launch command from the phone opens the app natively.
-  await phone.getByRole('button', { name: 'Remote' }).click();
+  await tab('Remote');
   await phone.locator('section').filter({ has: phone.getByRole('heading', { name: 'Apps', exact: true }) }).locator('button').first().click();
   await phone.waitForTimeout(500);
   const launched = await tv.evaluate(() => window.__launched);
@@ -150,7 +156,7 @@ try {
   wav.write('RIFF', 0); wav.writeUInt32LE(36 + n * 2, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
   wav.writeUInt32LE(sr, 24); wav.writeUInt32LE(sr * 2, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(n * 2, 40);
   for (let i = 0; i < n; i++) wav.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 660 * i) / sr) * 12000 * (1 - i / n)), 44 + i * 2);
-  await phone.getByRole('button', { name: 'Customize' }).click();
+  await tab('Customize');
   await phone.getByText('Custom sounds').waitFor({ timeout: 5000 });
   await phone.locator('input[type=file]').first().setInputFiles({ name: 'beep.wav', mimeType: 'audio/wav', buffer: wav });
   await phone.getByText('Custom clip set').waitFor({ timeout: 8000 }).then(() => check(true, 'custom clip uploaded'), () => check(false, 'custom clip uploaded'));
@@ -158,7 +164,40 @@ try {
   check(custom.stored.join() === 'move' && custom.style === 'custom', `TV stored the clip and switched to Custom (${JSON.stringify(custom)})`);
   const bad = await phone.evaluate(async () => (await fetch('/api/sounds/custom/select', { method: 'PUT', headers: { Authorization: `Bearer ${localStorage.getItem('noir.token')}` }, body: JSON.stringify({ data: btoa('not audio') }) })).status);
   check(bad === 400, 'non-audio upload rejected');
-  await phone.getByRole('button', { name: 'Remote' }).click();
+  await tab('Remote');
+
+  // Watch later: save a link from the phone; the TV fills in its title and opens it in the right app.
+  await tab('Saved');
+  await phone.getByPlaceholder('Paste a link').fill('Check this out https://youtu.be/abc123def45?si=x');
+  await phone.getByRole('button', { name: 'Save for later' }).click();
+  await phone.getByText('Test Video Title').waitFor({ timeout: 6000 }).then(() => check(true, 'saved link shows with its fetched title'), () => check(false, 'saved link shows with its fetched title'));
+  const tvSaved = await tv.evaluate(() => JSON.parse(localStorage.getItem('noir.saved') ?? '[]'));
+  check(tvSaved.length === 1 && tvSaved[0].appId === 'youtube', `TV stored it as a YouTube link (${tvSaved[0]?.appId})`);
+  await phone.getByRole('button', { name: /^Watch Test Video Title/ }).click();
+  await phone.waitForTimeout(500);
+  const opened = (await tv.evaluate(() => window.__launched)).find((l) => l.startsWith('url:'));
+  check(opened?.startsWith('url:com.google.android.youtube.tv:https://youtu.be/abc123def45'), `watch on TV opens the link in the YouTube app (${opened})`);
+  // TV unreachable: the link waits on the phone, then syncs.
+  globalThis.__tvDown = true;
+  await phone.getByPlaceholder('Paste a link').fill('https://www.netflix.com/title/80057281');
+  await phone.getByRole('button', { name: 'Save for later' }).click();
+  await phone.getByText('Waiting to sync').waitFor({ timeout: 6000 }).then(() => check(true, 'offline link queued on phone'), () => check(false, 'offline link queued on phone'));
+  globalThis.__tvDown = false;
+  await phone.getByRole('button', { name: 'Try syncing now' }).click();
+  await phone.getByText('Waiting to sync').waitFor({ state: 'detached', timeout: 6000 }).then(() => check(true, 'queued link synced'), () => check(false, 'queued link synced'));
+  const tvSaved2 = await tv.evaluate(() => JSON.parse(localStorage.getItem('noir.saved') ?? '[]'));
+  check(tvSaved2.length === 2 && tvSaved2[0].appId === 'netflix', 'TV has the Netflix link on top');
+  if (process.env.SHOTDIR) {
+    const D = process.env.SHOTDIR;
+    await phone.screenshot({ path: `${D}/phone-saved.png` });
+    await phone.getByRole('button', { name: 'Menu', exact: true }).click(); await phone.waitForTimeout(500);
+    await phone.screenshot({ path: `${D}/phone-menu.png` });
+    await phone.getByRole('button', { name: 'Close menu' }).click(); await phone.waitForTimeout(500);
+    await tv.click('nav >> text=Saved'); await tv.mouse.move(5, 5); await tv.waitForTimeout(900);
+    await tv.screenshot({ path: `${D}/tv-saved.png` });
+  }
+  await tab('Remote');
+  if (process.env.SHOTDIR) await phone.screenshot({ path: `${process.env.SHOTDIR}/phone-remote.png` });
 
   // Removing the phone on the TV revokes it.
   const id = tvPhones[0].id;

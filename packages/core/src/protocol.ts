@@ -1,3 +1,4 @@
+import type { SavedItem } from './saved.ts';
 import { z } from 'zod';
 import type { AppDefinition } from './catalog.ts';
 import type { MusicState } from './music.ts';
@@ -57,6 +58,8 @@ export interface NoirState {
   spotify: { configured: boolean; connected: boolean; account?: string; redirectUri?: string };
   weather: { tempC: number; code: number; updatedAt: number } | null;
   phones: PairedPhone[];
+  /** Watch-later links (Google TV setup). */
+  saved?: SavedItem[];
 }
 
 /* ------------------------------ commands ------------------------------ */

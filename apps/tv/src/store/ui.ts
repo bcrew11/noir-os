@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { rememberScreen } from '../focus/focus.ts';
 
-export type Screen = 'home' | 'apps' | 'music' | 'inputs' | 'ambient' | 'settings';
-export const SCREENS: Screen[] = ['home', 'apps', 'music', 'inputs', 'ambient', 'settings'];
+export type Screen = 'home' | 'apps' | 'music' | 'inputs' | 'saved' | 'ambient' | 'settings';
+export const SCREENS: Screen[] = ['home', 'apps', 'music', 'inputs', 'saved', 'ambient', 'settings'];
 
 interface UIState {
   screen: Screen;

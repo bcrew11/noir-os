@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CornerUpLeft, Home, Pause, Play, Power, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CornerUpLeft, Home, Pause, Play, Power, Volume1, Volume2, VolumeX } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { NavKey, RemoteKey } from '@noir/core';
 import { BrandMark, command, send, useNoir } from '@noir/ui';
@@ -7,6 +7,11 @@ import { allApps } from './apps.ts';
 import { Lights } from './Lights.tsx';
 
 type Target = 'noir' | 'tv';
+
+const PAD = {
+  background: 'linear-gradient(180deg, rgba(62,47,88,0.9), rgba(28,22,40,0.95))',
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 1.2rem 2.4rem -1rem rgba(0,0,0,0.8)',
+};
 
 /**
  * Two remote targets:
@@ -45,18 +50,15 @@ export function Remote() {
 
   const PadBtn = ({ k, children, className }: { k: NavKey; children: React.ReactNode; className: string }) => (
     <button type="button" aria-label={k} onClick={() => press(k)}
-      className={cx('absolute grid place-items-center text-fg/85 transition active:scale-90 active:text-highlight', className)}>{children}</button>
+      className={cx('absolute grid place-items-center text-fg/85 transition active:bg-white/10 active:text-highlight', className)}>{children}</button>
   );
 
-  const music = state?.music;
   const favorites = (state?.settings.home.favorites ?? []).map((id) => allApps(state).find((a) => a.id === id)).filter((a) => !!a);
   const inputs = state ? (state.tv.inputs.length ? state.tv.inputs : Object.keys(state.settings.inputs).map((id) => ({ id, systemName: id }))) : [];
 
   return (
     <div>
-      {onDevice ? (
-        <p className="mb-5 px-2 text-center text-[0.8rem] leading-relaxed text-fg-muted">Controls NOIR on your TV. Inside Netflix, YouTube and other apps, use the remote in the Google TV app.</p>
-      ) : (
+      {onDevice ? null : (
       <div className="mb-5 flex rounded-full bg-white/[0.05] p-1">
         {(['noir', 'tv'] as const).map((t) => (
           <button key={t} type="button" disabled={t === 'tv' && !tvKeys} onClick={() => { haptic(); setTarget(t); }}
@@ -68,17 +70,18 @@ export function Remote() {
       )}
       {target === 'tv' && <p className="-mt-2 mb-4 px-2 text-center text-[0.8rem] text-fg-muted">Keys go straight to the TV over Wi‑Fi — use this inside Netflix, YouTube TV, etc.{state?.tv.adapter === 'mock' ? ' (Demo: simulated.)' : ''}</p>}
 
-      {/* D-pad */}
-      <div className="relative mx-auto aspect-square w-[min(78vw,20rem)] rounded-full border border-line"
-        style={{ background: 'radial-gradient(circle at 50% 35%, rgba(70,52,100,0.55), rgba(24,19,34,0.9) 70%)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 1.5rem 3rem -1rem rgba(0,0,0,0.8)' }}
-        onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <PadBtn k="up" className="left-1/2 top-2 h-[28%] w-[34%] -translate-x-1/2"><ChevronUp className="size-9" /></PadBtn>
-        <PadBtn k="down" className="bottom-2 left-1/2 h-[28%] w-[34%] -translate-x-1/2"><ChevronDown className="size-9" /></PadBtn>
-        <PadBtn k="left" className="left-2 top-1/2 h-[34%] w-[28%] -translate-y-1/2"><ChevronLeft className="size-9" /></PadBtn>
-        <PadBtn k="right" className="right-2 top-1/2 h-[34%] w-[28%] -translate-y-1/2"><ChevronRight className="size-9" /></PadBtn>
+      {/* D-pad: a classic cross. Swipes on it work too. */}
+      <div className="relative mx-auto mt-2 aspect-square w-[min(80vw,19rem)]" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div aria-hidden className="absolute inset-x-0 top-1/3 h-1/3 rounded-[1.4rem] border border-line" style={PAD} />
+        <div aria-hidden className="absolute inset-y-0 left-1/3 w-1/3 rounded-[1.4rem] border border-line" style={PAD} />
+        <div aria-hidden className="absolute left-1/3 top-1/3 size-1/3" style={{ background: PAD.background }} />
+        <PadBtn k="up" className="left-1/3 top-0 h-1/3 w-1/3 rounded-t-[1.4rem]"><ChevronUp className="size-9" /></PadBtn>
+        <PadBtn k="down" className="bottom-0 left-1/3 h-1/3 w-1/3 rounded-b-[1.4rem]"><ChevronDown className="size-9" /></PadBtn>
+        <PadBtn k="left" className="left-0 top-1/3 h-1/3 w-1/3 rounded-l-[1.4rem]"><ChevronLeft className="size-9" /></PadBtn>
+        <PadBtn k="right" className="right-0 top-1/3 h-1/3 w-1/3 rounded-r-[1.4rem]"><ChevronRight className="size-9" /></PadBtn>
         <button type="button" aria-label="OK" onClick={() => press('ok')}
-          className="absolute left-1/2 top-1/2 grid size-[38%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-highlight/40 text-[1.15rem] font-semibold transition active:scale-90"
-          style={{ background: 'radial-gradient(circle at 50% 30%, var(--noir-accent), var(--noir-primary) 70%)', boxShadow: '0 0 2rem -0.4rem var(--noir-accent)' }}>OK</button>
+          className="absolute left-1/2 top-1/2 grid size-[26%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-highlight/40 text-[1.05rem] font-semibold transition active:scale-90"
+          style={{ background: 'radial-gradient(circle at 50% 30%, var(--noir-accent), var(--noir-primary) 70%)', boxShadow: '0 0 1.6rem -0.4rem var(--noir-accent)' }}>OK</button>
       </div>
 
       <div className="mx-auto mt-6 grid max-w-[22rem] grid-cols-3 gap-3">
@@ -100,9 +103,12 @@ export function Remote() {
       <Section title="Apps">
         <div className="grid grid-cols-3 gap-2.5">
           {favorites.map((a) => (
-            <button key={a.id} type="button" onClick={() => { haptic(); void command({ type: 'app.launch', appId: a.id }); }}
-              className="grid h-16 place-items-center overflow-hidden rounded-2xl border border-line text-[6px] transition active:scale-95" style={{ background: a.brand.background }}>
-              <BrandMark app={a} logoUrl={state?.logos[a.id]} scale={0.42} />
+            <button key={a.id} type="button" aria-label={a.name} onClick={() => { haptic(); void command({ type: 'app.launch', appId: a.id }); }}
+              className="relative grid aspect-video place-items-center overflow-hidden rounded-2xl border border-line transition active:scale-95" style={{ background: a.brand.background }}>
+              {/* On the Google TV stick, logos are the apps' own TV banners: full-tile artwork. */}
+              {state?.logos[a.id]
+                ? <img src={state.logos[a.id]} alt="" draggable={false} className="absolute inset-0 size-full object-cover" />
+                : <BrandMark app={a} scale={0.42} />}
             </button>
           ))}
         </div>
@@ -119,20 +125,6 @@ export function Remote() {
         </div>
       </Section>}
 
-      {music?.track && (
-        <Section title="Now playing">
-          <div className="glass flex items-center gap-3 rounded-3xl p-3">
-            {music.track.artUrl && <img src={music.track.artUrl} alt="" className="size-14 rounded-xl object-cover" />}
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[0.98rem] text-fg">{music.track.title}</div>
-              <div className="truncate text-[0.82rem] text-fg-muted">{music.track.artist}</div>
-            </div>
-            <Btn variant="ghost" label="Previous" onClick={() => void command({ type: 'music.previous' }, { silent: true })} className="!px-2"><SkipBack className="size-5" /></Btn>
-            <Btn variant="ghost" label="Play/Pause" onClick={() => void command({ type: 'music.playpause' }, { silent: true })} className="!px-2">{music.isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}</Btn>
-            <Btn variant="ghost" label="Next" onClick={() => void command({ type: 'music.next' }, { silent: true })} className="!px-2"><SkipForward className="size-5" /></Btn>
-          </div>
-        </Section>
-      )}
     </div>
   );
 }

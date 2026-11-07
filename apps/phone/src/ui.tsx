@@ -2,8 +2,28 @@ import type { ReactNode } from 'react';
 
 export const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(' ');
 
+/**
+ * A light tap of haptic feedback. Android: the Vibration API. iPhone (iOS 18+): Safari has no
+ * vibration API, but toggling a native switch control gives a system haptic tick, so a hidden one
+ * is flipped. Must run inside a tap handler.
+ */
+let iosSwitch: HTMLLabelElement | null = null;
 export function haptic(ms = 8) {
-  try { navigator.vibrate?.(ms); } catch { /* unsupported */ }
+  try {
+    if (typeof navigator.vibrate === 'function' && navigator.vibrate(ms)) return;
+    if (!iosSwitch) {
+      iosSwitch = document.createElement('label');
+      iosSwitch.setAttribute('aria-hidden', 'true');
+      iosSwitch.style.cssText = 'position:fixed;left:-100px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.setAttribute('switch', '');
+      input.tabIndex = -1;
+      iosSwitch.appendChild(input);
+      document.body.appendChild(iosSwitch);
+    }
+    iosSwitch.click();
+  } catch { /* no haptics available */ }
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {

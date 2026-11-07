@@ -22,6 +22,7 @@ const Apps = lazy(() => import('./screens/Apps.tsx'));
 const Music = lazy(() => import('./screens/Music.tsx'));
 const Inputs = lazy(() => import('./screens/Inputs.tsx'));
 const Ambient = lazy(() => import('./screens/Ambient.tsx'));
+const Saved = lazy(() => import('./screens/Saved.tsx'));
 const SettingsScreen = lazy(() => import('./screens/Settings.tsx'));
 
 export function App() {
@@ -85,6 +86,7 @@ export function App() {
                     {screen === 'apps' && <Apps />}
                     {screen === 'music' && <Music />}
                     {screen === 'inputs' && <Inputs />}
+                    {screen === 'saved' && <Saved />}
                     {screen === 'settings' && <SettingsScreen />}
                   </Suspense>
                 </motion.div>

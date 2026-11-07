@@ -1,13 +1,14 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { FlaskConical, Gamepad2, SlidersHorizontal, Tv } from 'lucide-react';
+import { Bookmark, FlaskConical, Gamepad2, Menu, Pause, Play, SkipBack, SkipForward, SlidersHorizontal, Tv, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { api, applyAccent, connect, getStoredToken, pushToast, setStoredToken, useNoir } from '@noir/ui';
+import { api, applyAccent, command, connect, getStoredToken, pushToast, setStoredToken, useNoir } from '@noir/ui';
 import { Customize } from './Customize.tsx';
 import { Devices } from './Devices.tsx';
 import { Remote } from './Remote.tsx';
-import { Btn, Field, cx } from './ui.tsx';
+import { Saved, flushSavedQueue } from './Saved.tsx';
+import { Btn, Field, cx, haptic } from './ui.tsx';
 
-type Tab = 'remote' | 'customize' | 'devices';
+type Tab = 'remote' | 'saved' | 'customize' | 'devices';
 
 function Pair({ onPaired }: { onPaired: () => void }) {
   const [name, setName] = useState(() => (/iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android phone' : 'Phone'));
@@ -62,10 +63,13 @@ export function App() {
   const state = useNoir((s) => s.state);
   const toasts = useNoir((s) => s.toasts);
   const [tab, setTab] = useState<Tab>('remote');
+  const [menu, setMenu] = useState(false);
   const [paired, setPaired] = useState(() => !!getStoredToken() || ['localhost', '127.0.0.1'].includes(location.hostname));
 
   useEffect(() => { if (paired) connect('phone'); }, [paired]);
   useEffect(() => { if (status === 'unauthorized') { setStoredToken(null); setPaired(false); } }, [status]);
+  // Links saved while the TV was unreachable sync as soon as NOIR is back, whatever page is open.
+  useEffect(() => { if (status === 'online' && paired) void flushSavedQueue(); }, [status, paired]);
   useEffect(() => { if (state) applyAccent(state.settings.appearance.accent); }, [state?.settings.appearance.accent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toastLayer = (
@@ -83,15 +87,22 @@ export function App() {
 
   if (!paired) return <>{toastLayer}<Pair onPaired={() => setPaired(true)} /></>;
 
-  const tabs: Array<[Tab, string, typeof Tv]> = [['remote', 'Remote', Gamepad2], ['customize', 'Customize', SlidersHorizontal], ['devices', 'Devices', Tv]];
+  const onDevice = state?.deployment === 'android-tv' && state.tv.adapter === 'none';
+  const tabs: Array<[Tab, string, typeof Tv]> = [
+    ['remote', 'Remote', Gamepad2],
+    ...(onDevice ? [['saved', 'Saved', Bookmark] as [Tab, string, typeof Tv]] : []),
+    ['customize', 'Customize', SlidersHorizontal],
+    ['devices', 'Devices', Tv],
+  ];
+  const title = tabs.find(([id]) => id === tab)?.[1] ?? 'NOIR';
   return (
-    <div className="min-h-dvh pb-28">
+    <div className="min-h-dvh pb-32">
       {toastLayer}
-      <header className="sticky top-0 z-40 flex items-center justify-between px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-xl" style={{ background: 'rgba(11,9,18,0.7)' }}>
-        <div className="flex items-center gap-2.5">
-          <img src="/phone/icon.svg" alt="" className="size-8 rounded-lg" />
-          <span className="text-[1.1rem] font-medium tracking-[0.35em]">NOIR</span>
-        </div>
+      <header className="sticky top-0 z-40 flex items-center gap-3 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-xl" style={{ background: 'rgba(11,9,18,0.7)' }}>
+        <button type="button" aria-label="Menu" onClick={() => { haptic(); setMenu(true); }} className="grid size-11 place-items-center rounded-2xl text-fg active:bg-white/10">
+          <Menu className="size-6" />
+        </button>
+        <span className="flex-1 text-[1.15rem] font-semibold">{title}</span>
         <div className="flex items-center gap-2 text-[0.78rem]">
           {state?.mode === 'demo' && <span className="inline-flex items-center gap-1 rounded-full border border-fuchsia-300/30 bg-fuchsia-400/10 px-2.5 py-1 text-fuchsia-100"><FlaskConical className="size-3.5" />Demo</span>}
           <span className={cx('size-2 rounded-full', status === 'online' ? 'bg-emerald-400' : 'bg-amber-400')} />
@@ -99,16 +110,59 @@ export function App() {
         </div>
       </header>
       <main className="px-5 pt-3">
-        {!state ? <p className="mt-20 text-center text-fg-muted">Connecting to NOIR…</p> : tab === 'remote' ? <Remote /> : tab === 'customize' ? <Customize /> : <Devices />}
+        {!state ? <p className="mt-20 text-center text-fg-muted">Connecting to NOIR…</p>
+          : tab === 'remote' ? <Remote /> : tab === 'saved' ? <Saved /> : tab === 'customize' ? <Customize /> : <Devices />}
       </main>
-      <nav className="glass fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex rounded-full p-1.5" style={{ background: 'rgba(30,23,43,0.88)' }}>
-        {tabs.map(([id, label, Icon]) => (
-          <button key={id} type="button" onClick={() => setTab(id)} className={cx('relative flex flex-1 flex-col items-center gap-0.5 rounded-full py-2 text-[0.72rem] font-medium', tab === id ? 'text-fg' : 'text-fg-muted')}>
-            {tab === id && <motion.span layoutId="ptab" className="absolute inset-0 rounded-full bg-primary/35" transition={{ duration: 0.25 }} />}
-            <Icon className="relative size-5" /><span className="relative">{label}</span>
-          </button>
-        ))}
-      </nav>
+
+      {/* Sidebar: closed by default. */}
+      <AnimatePresence>
+        {menu && (
+          <>
+            <motion.div key="scrim" className="fixed inset-0 z-50 bg-black/55" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMenu(false)} />
+            <motion.nav key="drawer" className="fixed inset-y-0 left-0 z-50 flex w-[17rem] flex-col gap-1 px-3 pb-6 pt-[max(1rem,env(safe-area-inset-top))]"
+              style={{ background: 'linear-gradient(180deg, #1b1428, #0e0b16)', boxShadow: '1rem 0 3rem -1rem rgba(0,0,0,0.8)' }}
+              initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', stiffness: 420, damping: 40 }}>
+              <div className="mb-5 flex items-center gap-2.5 px-2">
+                <img src="/phone/icon.svg" alt="" className="size-8 rounded-lg" />
+                <span className="flex-1 text-[1.1rem] font-medium tracking-[0.35em]">NOIR</span>
+                <button type="button" aria-label="Close menu" onClick={() => { haptic(); setMenu(false); }} className="grid size-10 place-items-center rounded-xl text-fg-muted active:bg-white/10"><X className="size-5" /></button>
+              </div>
+              {tabs.map(([id, label, Icon]) => (
+                <button key={id} type="button" onClick={() => { haptic(); setTab(id); setMenu(false); }}
+                  className={cx('flex items-center gap-3.5 rounded-2xl px-4 py-3.5 text-left text-[1.02rem] font-medium', tab === id ? 'bg-primary/30 text-fg' : 'text-fg-muted active:bg-white/5')}>
+                  <Icon className={cx('size-5', tab === id && 'text-highlight')} />{label}
+                </button>
+              ))}
+            </motion.nav>
+          </>
+        )}
+      </AnimatePresence>
+
+      <MiniPlayer />
+    </div>
+  );
+}
+
+/** Persistent now-playing bar at the bottom of every page. */
+function MiniPlayer() {
+  const music = useNoir((s) => s.state?.music);
+  if (!music) return null;
+  const t = music.track;
+  const send = (type: 'music.previous' | 'music.playpause' | 'music.next') => { haptic(); void command({ type }, { silent: true }); };
+  return (
+    <div className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center gap-3 rounded-[1.4rem] p-2.5 pr-3" style={{ background: 'rgba(30,23,43,0.92)' }}>
+      <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/25">
+        {t?.artUrl ? <img src={t.artUrl} alt="" className="size-full object-cover" /> : <Play className="size-5 text-fg-muted" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[0.95rem] text-fg">{t?.title ?? 'Nothing playing'}</div>
+        <div className="truncate text-[0.78rem] text-fg-muted">{t ? t.artist : music.providerLabel}</div>
+      </div>
+      <button type="button" aria-label="Previous" onClick={() => send('music.previous')} className="grid size-10 place-items-center rounded-full text-fg/85 active:bg-white/10"><SkipBack className="size-5" /></button>
+      <button type="button" aria-label="Play/Pause" onClick={() => send('music.playpause')} className="grid size-11 place-items-center rounded-full bg-fg text-ink-900 active:scale-95">
+        {music.isPlaying ? <Pause className="size-5" /> : <Play className="size-5 translate-x-px" />}
+      </button>
+      <button type="button" aria-label="Next" onClick={() => send('music.next')} className="grid size-10 place-items-center rounded-full text-fg/85 active:bg-white/10"><SkipForward className="size-5" /></button>
     </div>
   );
 }

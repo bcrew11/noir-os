@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertTriangle, CheckCircle2, Download, FlaskConical, Gamepad2, Grid2x2, Home, Info, Monitor, MountainSnow, Music2, Settings, Tv, Wifi, WifiOff, XCircle } from 'lucide-react';
+import { AlertTriangle, Bookmark, CheckCircle2, Download, FlaskConical, Gamepad2, Grid2x2, Home, Info, Monitor, MountainSnow, Music2, Settings, Tv, Wifi, WifiOff, XCircle } from 'lucide-react';
 import { formatClock, type InputIcon } from '@noir/core';
 import { useNoir, useNow } from '@noir/ui';
 import { Camera, Disc3, Laptop, Speaker, Cast } from 'lucide-react';
@@ -34,6 +34,10 @@ export function Header() {
   const tv = useNoir((s) => s.state?.tv);
   const conn = useNoir((s) => s.status);
   const clock = formatClock(now, settings?.appearance.clock24h ?? false);
+  const go = useUI((s) => s.go);
+  const level = useMotion();
+  // Ambient (screensaver-style clock) lives in the corner now; the nav bar has Saved instead.
+  const amb = useFocusable<HTMLButtonElement>('header-ambient', { group: 'header', onSelect: () => go('ambient') });
 
   const linkOk = conn === 'online';
   const tvOk = tv?.adapter === 'mock' || (tv?.adapter === 'vizio' && tv.reachable);
@@ -56,6 +60,12 @@ export function Header() {
         <span className="text-[1.75rem] font-normal tabular-nums tracking-tight text-fg">
           {clock.time}{clock.suffix && <span className="ml-1.5">{clock.suffix}</span>}
         </span>
+        <span className="h-9 w-px bg-line-strong" />
+        <button ref={amb.ref} {...amb.pointer} data-focused={amb.focused || undefined} tabIndex={-1} aria-label="Ambient" style={focusLift(amb.focused, level, 1.12, 0)}
+          className={cx('flex h-13 items-center gap-2.5 rounded-full px-4 transition-colors', amb.focused ? 'bg-white/14 focus-ring text-fg' : 'text-fg/90')}>
+          <MountainSnow className="size-7" strokeWidth={1.6} />
+          {amb.focused && <span className="text-[1.1rem] font-medium">Ambient</span>}
+        </button>
       </div>
     </header>
   );
@@ -91,7 +101,7 @@ const NAV: Array<{ id: Screen; label: string; icon: typeof Home }> = [
   { id: 'apps', label: 'Apps', icon: Grid2x2 },
   { id: 'music', label: 'Music', icon: Music2 },
   { id: 'inputs', label: 'Inputs', icon: Monitor },
-  { id: 'ambient', label: 'Ambient', icon: MountainSnow },
+  { id: 'saved', label: 'Saved', icon: Bookmark },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 

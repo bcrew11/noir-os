@@ -69,7 +69,8 @@ test('phone pairs with a code shown on the TV, then drives the dashboard', async
   await expect(tv.locator('[data-app="youtube"]')).toHaveAttribute('data-focused', 'true');
 
   // Settings changed on the phone sync to the TV immediately.
-  await phone.getByRole('button', { name: 'Customize' }).click();
+  await phone.getByRole('button', { name: 'Menu', exact: true }).click();
+  await phone.locator('nav').getByRole('button', { name: 'Customize' }).click();
   await phone.getByRole('button', { name: 'Rose', exact: true }).click();
   await expect.poll(() => tv.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--noir-primary').trim().toLowerCase())).toBe('#e11d74');
   await phone.getByRole('button', { name: 'Violet', exact: true }).click();
