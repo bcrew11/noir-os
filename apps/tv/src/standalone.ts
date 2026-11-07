@@ -179,7 +179,8 @@ export function startStandalone() {
         useNoir.setState({ state: { ...cur, music: next } });
       }
     }
-    setTimeout(tick, useNoir.getState().state?.music.isPlaying ? 2000 : 5000);
+    // Cheap now that artwork is served by URL, so a new track shows up promptly even after a pause.
+    setTimeout(tick, 2000);
   };
   setTimeout(tick, 2000);
 

@@ -70,7 +70,7 @@ class MainActivity : Activity() {
             addJavascriptInterface(Bridge(), "NoirAndroid")
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, req: WebResourceRequest): WebResourceResponse? =
-                    assets.shouldInterceptRequest(req.url)
+                    NowPlayingReader.intercept(req.url) ?: assets.shouldInterceptRequest(req.url)
                 override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
                     val url = serverUrl()
                     if (req.isForMainFrame && url != null) view.loadData(offlinePage(url), "text/html", "utf-8")
@@ -137,6 +137,7 @@ class MainActivity : Activity() {
                         runJs("window.__noirPhoneSocket && window.__noirPhoneSocket(${JSONObject.quote(event)}, ${JSONObject.quote(clientId)}, ${JSONObject.quote(data ?: "")})")
                     }
                 })
+                srv.artFor = { id -> NowPlayingReader.artBytes(id) }
                 srv.startServing()
                 phoneServer = srv
                 phonePort = port

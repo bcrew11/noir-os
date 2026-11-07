@@ -62,6 +62,8 @@ export const SettingsSchema = z.object({
     showInputWidget: z.boolean().default(true),
     /** Seconds of inactivity on Home, while music plays, before the Now Playing view appears (0 = never). */
     nowPlayingAfterSec: z.number().int().min(0).max(600).default(20),
+    /** Now Playing look: 'color' tints the screen from the album art; 'dark' keeps it black. */
+    nowPlayingTheme: z.enum(['color', 'dark']).default('color'),
     /** Input featured on the home widget; null = pick automatically (first HDMI source that isn't a soundbar). */
     widgetInputId: z.string().nullable().default(null),
   }).default({}),

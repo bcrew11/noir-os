@@ -31,7 +31,7 @@ class NoirDream : DreamService() {
             settings.domStorageEnabled = true
             addJavascriptInterface(DreamBridge(), "NoirAndroid")
             webViewClient = object : WebViewClient() {
-                override fun shouldInterceptRequest(view: WebView, req: WebResourceRequest): WebResourceResponse? = assets.shouldInterceptRequest(req.url)
+                override fun shouldInterceptRequest(view: WebView, req: WebResourceRequest): WebResourceResponse? = NowPlayingReader.intercept(req.url) ?: assets.shouldInterceptRequest(req.url)
             }
             loadUrl("https://appassets.androidplatform.net/assets/web/index.html?dream=1")
         }

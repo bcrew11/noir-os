@@ -39,6 +39,9 @@ class PhoneServer(
         pending.remove(id)?.complete(status to body)
     }
 
+    /** Album art for /art/<id>.jpg (the now-playing cover), set by the activity. */
+    @Volatile var artFor: (String) -> ByteArray? = { null }
+
     fun send(clientId: String, text: String) {
         try { sockets[clientId]?.send(text) } catch (_: IOException) { /* closed */ }
     }
@@ -52,6 +55,9 @@ class PhoneServer(
         return when {
             uri == "/" || uri == "/phone" -> redirect("/phone/")
             uri.startsWith("/phone/") -> serveAsset(uri.removePrefix("/phone/"))
+            uri.startsWith("/art/") -> artFor(uri.removePrefix("/art/").removeSuffix(".jpg"))
+                ?.let { newFixedLengthResponse(Response.Status.OK, "image/jpeg", java.io.ByteArrayInputStream(it), it.size.toLong()) }
+                ?: json(404, """{"message":"No artwork"}""")
             uri.startsWith("/api/") -> relayApi(session)
             else -> json(404, """{"message":"Not found"}""")
         }

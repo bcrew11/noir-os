@@ -176,7 +176,12 @@ function soundSlots() {
 
 function snapshot(): NoirState | null {
   const s = useNoir.getState().state;
-  return s ? { ...s, phones: pairedPhones() } : null;
+  if (!s) return null;
+  // The cover is served by the stick at /art/… for phones (the TV page uses its own origin).
+  const track = s.music.track;
+  const art = track?.artUrl?.replace('https://appassets.androidplatform.net/art/', '/art/');
+  const music = track && art !== track.artUrl ? { ...s.music, track: { ...track, artUrl: art } } : s.music;
+  return { ...s, music, phones: pairedPhones() };
 }
 
 /* ------------------------------ WebSocket ------------------------------- */

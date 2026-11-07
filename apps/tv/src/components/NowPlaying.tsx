@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { formatClock, formatDuration } from '@noir/core';
 import { useMusicProgress, useNoir, useNow } from '@noir/ui';
 import { popScope, pushScope } from '../focus/focus.ts';
@@ -41,7 +41,14 @@ export function NowPlayingView({ onExit }: { onExit: () => void }) {
   const progress = useMusicProgress(music);
   const now = useNow();
   const level = useMotion();
-  const wash = useArtWash(music?.track?.artUrl);
+  const dark = useNoir((s) => s.state?.settings.home.nowPlayingTheme === 'dark');
+  // Hold the last song through the brief gap apps leave between tracks.
+  const lastTrack = useRef(music?.track);
+  if (music?.track) lastTrack.current = music.track;
+  const track = music?.track ?? lastTrack.current;
+  const wash = useArtWash(dark ? undefined : track?.artUrl);
+  const [hint, setHint] = useState(true);
+  useEffect(() => { const id = setTimeout(() => setHint(false), 4000); return () => clearTimeout(id); }, []);
 
   useEffect(() => {
     pushScope('now-playing');
@@ -51,20 +58,19 @@ export function NowPlayingView({ onExit }: { onExit: () => void }) {
     return () => { off(); popScope('now-playing'); useUI.setState({ lastActivity: Date.now() }); };
   }, [onExit]);
 
-  const track = music?.track;
   if (!music || !track) return null;
   const pct = track.durationMs ? Math.min(100, (progress / track.durationMs) * 100) : 0;
   const clock = formatClock(now, clock24);
 
   return (
-    <motion.div className="absolute inset-0 z-30 overflow-hidden bg-ink-900" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    <motion.div className={`absolute inset-0 z-30 overflow-hidden ${dark ? 'bg-black' : 'bg-ink-900'}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: level === 'off' ? 0 : 0.6 }} onClick={onExit}>
-      {wash
+      {dark ? null : wash
         ? <img src={wash} alt="" aria-hidden className="absolute inset-0 size-full scale-110 object-cover opacity-70" style={{ imageRendering: 'auto' }} />
         : <div aria-hidden className="absolute inset-0" style={{ background: 'radial-gradient(70% 70% at 30% 40%, color-mix(in srgb, var(--noir-primary) 45%, transparent), transparent 70%)' }} />}
-      <div aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(11,9,18,0.55), rgba(11,9,18,0.25) 50%, rgba(11,9,18,0.7)), linear-gradient(0deg, rgba(11,9,18,0.85), transparent 45%)' }} />
+      {!dark && <div aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(11,9,18,0.55), rgba(11,9,18,0.25) 50%, rgba(11,9,18,0.7)), linear-gradient(0deg, rgba(11,9,18,0.85), transparent 45%)' }} />}
 
-      <div className="absolute left-1/2 top-1/2 flex h-[67.5rem] w-[120rem] -translate-x-1/2 -translate-y-1/2 items-center gap-20 px-28">
+      <div className={`absolute left-1/2 top-1/2 flex h-[67.5rem] w-[120rem] -translate-x-1/2 -translate-y-1/2 items-center gap-20 px-28 ${dark ? 'opacity-[0.82]' : ''}`}>
         <motion.div key={track.id} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: level === 'off' ? 0 : 0.7 }}
           className="shrink-0 rounded-[2.5rem] shadow-[0_3rem_7rem_-2rem_rgba(0,0,0,0.9)]">
           <Artwork url={track.artUrl} className="size-[34rem] rounded-[2.5rem]" iconClass="size-32" />
@@ -86,7 +92,7 @@ export function NowPlayingView({ onExit }: { onExit: () => void }) {
           )}
         </div>
         <div className="absolute right-28 top-16 text-[2rem] font-light tabular-nums text-fg/85">{clock.time}{clock.suffix && <span className="ml-1.5 text-[1.3rem]">{clock.suffix}</span>}</div>
-        <div className="absolute bottom-14 left-1/2 -translate-x-1/2 text-[1rem] text-fg-dim">Press any button to return</div>
+        <div className="absolute bottom-14 left-1/2 -translate-x-1/2 text-[1rem] text-fg-dim transition-opacity duration-[1500ms]" style={{ opacity: hint ? 1 : 0 }}>Press any button to return</div>
       </div>
     </motion.div>
   );

@@ -162,6 +162,12 @@ function HomeSection({ s }: { s: NoirState }) {
           value={<PickerValue>{h.nowPlayingAfterSec ? `After ${h.nowPlayingAfterSec < 60 ? `${h.nowPlayingAfterSec} sec` : `${h.nowPlayingAfterSec / 60} min`}` : 'Off'}</PickerValue>}
           onSelect={() => pickList('Now Playing view', String(h.nowPlayingAfterSec), [0, 10, 20, 45, 120].map((n) => ({ value: String(n), label: n === 0 ? 'Off' : n < 60 ? `After ${n} seconds` : `After ${n / 60} minutes` })),
             (v) => set({ nowPlayingAfterSec: Number(v) }))} />
+        <FRow id="hm-np-theme" title="Now Playing look" disabled={!h.nowPlayingAfterSec}
+          value={<PickerValue>{h.nowPlayingTheme === 'dark' ? 'Dark' : 'Album colors'}</PickerValue>}
+          onSelect={() => pickList('Now Playing look', h.nowPlayingTheme, [
+            { value: 'color', label: 'Album colors', hint: 'The screen takes on the colors of the album art.' },
+            { value: 'dark', label: 'Dark', hint: 'Black background with dimmer text — easy on the eyes at night.' },
+          ], (v) => set({ nowPlayingTheme: v as typeof h.nowPlayingTheme }))} />
         <FRow id="hm-input" title="Input widget" right={<Toggle on={h.showInputWidget} />} onSelect={() => set({ showInputWidget: !h.showInputWidget })} />
         <FRow id="hm-input-id" title="Input shown on Home"
           value={h.widgetInputId ? `${h.widgetInputId.replace('-', ' ')} · ${s.settings.inputs[h.widgetInputId]?.label ?? s.tv.inputs.find((i) => i.id === h.widgetInputId)?.systemName ?? ''}` : `Automatic (${widgetInput(s).replace('-', ' ')})`}
