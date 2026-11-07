@@ -82,3 +82,20 @@ test('unpaired remote devices are rejected by the API', async ({ request }) => {
   const res = await request.get(`http://${lanIp}:5174/api/state`);
   expect(res.status()).toBe(401);
 });
+
+test('Down from the last row of the App Library reaches the nav bar', async ({ page }) => {
+  await page.goto(TV);
+  await expect(page.locator('[data-app="youtube-tv"]')).toHaveAttribute('data-focused', 'true');
+  await page.click('nav >> text=Apps');
+  await page.mouse.move(5, 5);
+  await expect(page.getByRole('heading', { name: 'App Library' })).toBeVisible();
+  for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowDown');
+  await expect(page.locator('nav [data-focused]')).toHaveCount(1);
+});
+
+test('Home on the Home screen jumps to the nav bar', async ({ page }) => {
+  await page.goto(TV);
+  await expect(page.locator('[data-app="youtube-tv"]')).toHaveAttribute('data-focused', 'true');
+  await page.keyboard.press('h');
+  await expect(page.locator('nav [data-focused]')).toHaveText(/Home/);
+});

@@ -1,6 +1,6 @@
 import type { NavKey } from '@noir/core';
 import { onRemoteNav } from '@noir/ui';
-import { hasLongSelect, move, select } from './focus.ts';
+import { focus, hasLongSelect, move, select } from './focus.ts';
 import { handleBack, markActivity, useUI } from '../store/ui.ts';
 
 /**
@@ -59,9 +59,14 @@ export function dispatchNav(key: NavKey, opts: { long?: boolean } = {}) {
         if (ui.screen !== 'home') ui.go('home');
       }
       return;
-    case 'home':
-      useUI.getState().go('home');
+    case 'home': {
+      // Home anywhere → Home screen. Home again while already there → jump to the nav bar,
+      // so the nav is always one or two presses away.
+      const ui = useUI.getState();
+      if (ui.screen === 'home') focus('nav-home');
+      else ui.go('home');
       return;
+    }
     case 'playpause':
       extra.onPlayPause?.();
       return;

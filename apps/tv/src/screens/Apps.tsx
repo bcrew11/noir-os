@@ -53,7 +53,11 @@ export default function Apps() {
       <div className="scroll-hidden -mx-4 flex gap-3 overflow-x-auto px-4 py-3">
         {filters.map(([f, label]) => <Chip key={f} id={`chip-${f}`} label={label} active={filter === f} onSelect={() => setFilter(f)} />)}
       </div>
-      <div className="scroll-hidden -mx-6 mt-4 min-h-0 flex-1 overflow-y-auto px-6 pb-40 pt-4" style={{ maskImage: 'linear-gradient(180deg, transparent 0, #000 1.5rem, #000 calc(100% - 9rem), transparent calc(100% - 5rem))', WebkitMaskImage: 'linear-gradient(180deg, transparent 0, #000 1.5rem, #000 calc(100% - 9rem), transparent calc(100% - 5rem))' }}>
+      <div className="scroll-hidden -mx-6 mt-4 min-h-0 flex-1 overflow-y-auto px-6 pb-40 pt-4" style={{
+        // Keep focused rows clear of the floating nav bar: scrollIntoView honours scroll-padding, so
+        // the last row stops above the nav and pressing Down from it reaches the nav bar.
+        scrollPaddingTop: '2rem', scrollPaddingBottom: '10rem',
+        maskImage: 'linear-gradient(180deg, transparent 0, #000 1.5rem, #000 calc(100% - 9rem), transparent calc(100% - 5rem))', WebkitMaskImage: 'linear-gradient(180deg, transparent 0, #000 1.5rem, #000 calc(100% - 9rem), transparent calc(100% - 5rem))' }}>
         {apps.length === 0 ? (
           <p className="mt-10 text-[1.4rem] text-fg-muted">No apps match. Custom shortcuts can be added from the phone companion.</p>
         ) : (
