@@ -1,8 +1,8 @@
 {
-  "versionCode": 16,
-  "versionName": "0.5.5",
-  "sha256": "2ea925ae26e819d21224407e9ef542b9bc37633e1a80ddefe4c7bd41e13c55cc",
-  "notes": "Cinematic boot animation; sharp album art and steadier Now Playing (dark look option, opens from Music too); Saved: watch-later links from your phone; Ambient moved to the top corner; phone remote redesign (sidebar, mini player, cross D-pad, haptics).",
-  "publishedAt": "2026-11-07T05:14:47.399Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.5.apk"
+  "versionCode": 17,
+  "versionName": "0.5.6",
+  "sha256": "c643e9a9da4dc33ca7625252aa3c53f6137299c744c7e076e4b24d66c83e0fc2",
+  "notes": "Smoother, crisper start-up animation; saved Netflix shows open on the show's page; weather appears as soon as it's set up (and next to the clock); iPhone 'Save to NOIR' Shortcut support.",
+  "publishedAt": "2026-11-07T05:26:40.353Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.6.apk"
 }
