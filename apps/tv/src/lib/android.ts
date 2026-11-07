@@ -10,6 +10,9 @@ export interface AndroidBridge {
   appBanner(pkg: string): string | null;
   openStore(pkg: string): boolean;
   mediaKey(key: string): void;
+  /** Low-latency navigation sounds (native SoundPool). */
+  soundLoad?(key: string, wavBase64: string): void;
+  soundPlay?(key: string, volume: number): boolean;
   nowPlaying(): string;
   openNotificationAccess(): boolean;
   openSystemSettings(): void;

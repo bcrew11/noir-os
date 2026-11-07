@@ -4,6 +4,7 @@
  * The same functions render the preview WAVs in scripts/render-sounds.mjs, so what you audition
  * is exactly what plays on the TV.
  */
+import { androidBridge } from './android.ts';
 export const SOUND_STYLES = {
   off: 'Off',
   thock: 'Thock',
@@ -191,15 +192,59 @@ async function prerender(style: SoundStyle) {
   }
 }
 
+/** 16-bit mono WAV, base64 — the format handed to the native player. */
+function wavBase64(buf: AudioBuffer, gain: number): string {
+  const data = buf.getChannelData(0);
+  const bytes = new Uint8Array(44 + data.length * 2);
+  const v = new DataView(bytes.buffer);
+  const str = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + data.length * 2, true); str(8, 'WAVE');
+  str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, buf.sampleRate, true); v.setUint32(28, buf.sampleRate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  str(36, 'data'); v.setUint32(40, data.length * 2, true);
+  for (let i = 0; i < data.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, data[i]! * gain)) * 0x7fff, true);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/**
+ * On the Google TV launcher, hand the current style's clips to Android's SoundPool: the WebView's
+ * audio output adds a noticeable delay, the native player doesn't. Volume is baked in.
+ */
+let nativeFor = '';
+const nativeSounds = () => {
+  const b = androidBridge();
+  return b?.soundLoad && b.soundPlay ? b : null;
+};
+async function loadNative() {
+  const b = nativeSounds();
+  const { style, volume } = current;
+  const tag = `${style}@${volume}`;
+  if (!b || style === 'off' || nativeFor === tag) return;
+  await prerender(style);
+  const set = clips.get(style);
+  if (!set || current.style !== style || current.volume !== volume) return;
+  for (const kind of ['move', 'select', 'back'] as const) {
+    const clip = set[kind];
+    if (clip) b.soundLoad!(kind, wavBase64(clip, volume));
+  }
+  nativeFor = tag;
+}
+
 export function configureSound(style: SoundStyle, volume: number) {
   current = { style, volume };
   if (master) master.gain.value = volume;
-  void prerender(style);
+  void prerender(style).then(loadNative);
 }
 
 /** Play a navigation sound. `volume` overrides the setting for this one sound (previews). */
 export function playSound(kind: SoundKind, style: SoundStyle = current.style, volume?: number) {
   if (style === 'off') return;
+  // Everyday navigation goes through the native player; previews of other styles/volumes use Web Audio.
+  if (volume === undefined && style === current.style && nativeFor === `${style}@${current.volume}`) {
+    try { if (nativeSounds()?.soundPlay!(kind, 1)) return; } catch { /* fall back to Web Audio */ }
+  }
   const c = audio();
   if (!c || !master) return;
   try {

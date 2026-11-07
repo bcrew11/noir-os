@@ -112,12 +112,14 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         phoneServer?.stop()
         phoneServer = null
+        sounds.release()
         NoirBus.detach(this)
         super.onDestroy()
     }
 
     /* ----------------------------- phone app hosting ----------------------------- */
 
+    private val sounds by lazy { UiSounds(this) }
     private var phoneServer: PhoneServer? = null
     private var phonePort = 0
 
@@ -145,9 +147,19 @@ class MainActivity : Activity() {
 
     /** The stick's LAN IPv4 address (Wi-Fi or Ethernet). */
     private fun lanAddress(): String? {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        val props = cm.getLinkProperties(cm.activeNetwork) ?: return null
-        return props.linkAddresses.map { it.address }.firstOrNull { it is java.net.Inet4Address && !it.isLoopbackAddress }?.hostAddress
+        val active = try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            cm.getLinkProperties(cm.activeNetwork)?.linkAddresses?.map { it.address }
+                ?.firstOrNull { it is java.net.Inet4Address && !it.isLoopbackAddress }?.hostAddress
+        } catch (_: Exception) { null }
+        if (active != null) return active
+        // Fallback that needs no permission: any up, non-loopback interface with a private IPv4.
+        return try {
+            java.net.NetworkInterface.getNetworkInterfaces().toList()
+                .filter { it.isUp && !it.isLoopback }
+                .flatMap { it.inetAddresses.toList() }
+                .firstOrNull { it is java.net.Inet4Address && it.isSiteLocalAddress }?.hostAddress
+        } catch (_: Exception) { null }
     }
 
     fun runJs(js: String) = runOnUiThread { if (::web.isInitialized) web.evaluateJavascript(js, null) }
@@ -260,6 +272,12 @@ class MainActivity : Activity() {
         /** URL phones should open, e.g. http://192.168.4.130:8787/phone/ (null if not hosting). */
         @JavascriptInterface
         fun phoneUrl(): String? = if (phoneServer == null) null else lanAddress()?.let { "http://$it:$phonePort/phone/" }
+
+        @JavascriptInterface
+        fun soundLoad(key: String, wavBase64: String) { try { sounds.load(key, wavBase64) } catch (_: Exception) { } }
+
+        @JavascriptInterface
+        fun soundPlay(key: String, volume: Float): Boolean = try { sounds.play(key, volume) } catch (_: Exception) { false }
 
         @JavascriptInterface
         fun phoneRespond(id: String, status: Int, body: String) { phoneServer?.complete(id, status, body) }
