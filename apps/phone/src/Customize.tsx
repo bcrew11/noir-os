@@ -5,7 +5,7 @@ import { api, patchSettings, pushToast, useNoir } from '@noir/ui';
 import { allApps } from './apps.ts';
 import { Btn, Card, Field, Section, Segmented, Toggle, cx } from './ui.tsx';
 
-const SOUND_OPTIONS: Array<[Settings['sound']['style'], string]> = [['off', 'Off'], ['thock', 'Thock'], ['tactile', 'Tactile'], ['creamy', 'Creamy'], ['tick', 'Tick'], ['glass', 'Glass'], ['wood', 'Wood'], ['bubble', 'Bubble'], ['felt', 'Felt']];
+const SOUND_OPTIONS: Array<[Settings['sound']['style'], string]> = [['off', 'Off'], ['thock', 'Thock'], ['tactile', 'Tactile'], ['creamy', 'Creamy'], ['tick', 'Tick'], ['glass', 'Glass'], ['wood', 'Wood'], ['bubble', 'Bubble'], ['felt', 'Felt'], ['hud', 'HUD'], ['holo', 'Hologram'], ['scan', 'Scanner']];
 
 export function Customize() {
   const state = useNoir((s) => s.state);

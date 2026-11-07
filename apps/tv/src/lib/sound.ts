@@ -15,6 +15,9 @@ export const SOUND_STYLES = {
   wood: 'Wood',
   bubble: 'Bubble',
   felt: 'Felt',
+  hud: 'HUD',
+  holo: 'Hologram',
+  scan: 'Scanner',
 } as const;
 export type SoundStyle = keyof typeof SOUND_STYLES;
 export type SoundKind = 'move' | 'select' | 'back';
@@ -29,11 +32,17 @@ export const SOUND_HINTS: Record<SoundStyle, string> = {
   wood: 'A warm, muted knock.',
   bubble: 'A gentle rising pop.',
   felt: 'A low, cushioned tap — the quietest feel.',
+  hud: 'Smooth, glassy tones that glide upward — a heads-up display at work.',
+  holo: 'A soft shimmering tone with a breath of air — a hologram coming to life.',
+  scan: 'A rounded synth swell that brightens as it plays — data rolling past.',
 };
 
 type Ctx = BaseAudioContext;
 
 function env(ctx: Ctx, g: GainNode, t: number, peak: number, attack: number, decay: number) {
+  // Silent until the envelope starts: a gain node defaults to 1, which let the first (sub-sample)
+  // frame of a sound through at full level — an audible click.
+  g.gain.value = 0.0001;
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(peak, t + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
@@ -52,15 +61,19 @@ function tone(ctx: Ctx, out: AudioNode, t: number, freq: number, peak: number, d
 }
 
 let noiseBuf: AudioBuffer | null = null;
-function noise(ctx: Ctx, out: AudioNode, t: number, peak: number, decay: number, filter: { type: BiquadFilterType; freq: number; q?: number }, attack = 0.001, lowpass?: number) {
+function noiseBuffer(ctx: Ctx): AudioBuffer {
   if (!noiseBuf || noiseBuf.sampleRate !== ctx.sampleRate) {
     noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.2), ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
     let seed = 1;
     for (let i = 0; i < d.length; i++) { seed = (seed * 16807) % 2147483647; d[i] = (seed / 2147483647) * 2 - 1; }
   }
+  return noiseBuf;
+}
+
+function noise(ctx: Ctx, out: AudioNode, t: number, peak: number, decay: number, filter: { type: BiquadFilterType; freq: number; q?: number }, attack = 0.001, lowpass?: number) {
   const src = ctx.createBufferSource();
-  src.buffer = noiseBuf;
+  src.buffer = noiseBuffer(ctx);
   const f = ctx.createBiquadFilter();
   f.type = filter.type; f.frequency.value = filter.freq; f.Q.value = filter.q ?? 1;
   const g = ctx.createGain();
@@ -75,8 +88,73 @@ function noise(ctx: Ctx, out: AudioNode, t: number, peak: number, decay: number,
   src.stop(t + decay + 0.02);
 }
 
+/** A short feedback echo (low-passed), returned as an input node: gives soft sounds some space. */
+function echo(ctx: Ctx, out: AudioNode, time: number, feedback: number): AudioNode {
+  const input = ctx.createGain();
+  input.gain.value = 0.35;
+  const d = ctx.createDelay(0.5);
+  d.delayTime.value = time;
+  const fb = ctx.createGain();
+  fb.gain.value = feedback;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 2200; lp.Q.value = 0.5;
+  input.connect(d).connect(lp).connect(fb).connect(d);
+  lp.connect(out);
+  return input;
+}
+
+/** A rounded sine with a soft attack and an optional slow vibrato; sent dry and to the echo. */
+function smooth(ctx: Ctx, out: AudioNode, wet: AudioNode, t: number, from: number, to: number, peak: number, attack: number, decay: number, opts: { vibrato?: number; depth?: number } = {}) {
+  const o = ctx.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(from, t);
+  if (to !== from) o.frequency.exponentialRampToValueAtTime(to, t + Math.min(0.04, decay * 0.5));
+  let lfo: OscillatorNode | null = null;
+  if (opts.vibrato) {
+    lfo = ctx.createOscillator();
+    lfo.frequency.value = opts.vibrato;
+    const g = ctx.createGain();
+    g.gain.value = opts.depth ?? from * 0.01;
+    lfo.connect(g).connect(o.frequency);
+  }
+  const g = ctx.createGain();
+  env(ctx, g, t, peak, attack, decay);
+  o.connect(g);
+  g.connect(out);
+  g.connect(wet);
+  const end = t + attack + decay + 0.02;
+  o.start(t); o.stop(end);
+  if (lfo) { lfo.start(t); lfo.stop(end); }
+}
+
+/** Soft filtered air under a tone (slow attack, so no click). */
+function breath(ctx: Ctx, out: AudioNode, t: number, peak: number, attack: number, decay: number, freq: number) {
+  noise(ctx, out, t, peak, decay, { type: 'bandpass', freq, q: 0.8 }, attack, freq * 1.6);
+}
+
+/** A soft synth note (two detuned triangles) whose low-pass filter sweeps open or closed. */
+function swell(ctx: Ctx, out: AudioNode, wet: AudioNode, t: number, f: number, cutFrom: number, cutTo: number, peak: number, decay: number) {
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.Q.value = 3;
+  lp.frequency.setValueAtTime(cutFrom, t);
+  lp.frequency.exponentialRampToValueAtTime(cutTo, t + decay * 0.7);
+  const g = ctx.createGain();
+  env(ctx, g, t, peak, 0.01, decay);
+  for (const detune of [-7, 7]) {
+    const o = ctx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.value = f;
+    o.detune.value = detune;
+    o.connect(lp);
+    o.start(t); o.stop(t + decay + 0.04);
+  }
+  lp.connect(g);
+  g.connect(out);
+  g.connect(wet);
+}
+
 /** Per-style level trim so every style sounds about equally loud (measured peaks, ~0.3). */
-const STYLE_TRIM: Record<SoundStyle, number> = { off: 0, thock: 0.47, tactile: 0.62, creamy: 0.83, tick: 1.75, glass: 3, wood: 1.1, bubble: 1.5, felt: 0.95 };
+const STYLE_TRIM: Record<SoundStyle, number> = { off: 0, thock: 0.47, tactile: 0.62, creamy: 0.83, tick: 1.75, glass: 3, wood: 1.1, bubble: 1.5, felt: 0.95, hud: 1.05, holo: 1.2, scan: 0.6 };
 
 /** Schedule one sound on any (online or offline) audio context. */
 export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: SoundKind, t = ctx.currentTime) {
@@ -150,6 +228,41 @@ export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: 
       noise(ctx, out, t, 0.1, 0.03, { type: 'lowpass', freq: 900 });
       break;
     }
+    /*
+     * Futuristic set — smooth, no clicks: soft fade-ins (8–14 ms), rounded sine tones in the
+     * 600 Hz–1.6 kHz range, gentle glides and a quiet echo tail for a sense of space.
+     *   HUD:      a pair of slightly detuned sines gliding up, with a faint fifth above (glassy).
+     *   Hologram: a sine with slow shimmer (vibrato) and a soft airy breath underneath.
+     *   Scanner:  a filtered synth swell whose brightness sweeps, like data rolling past.
+     * Select rises into a second, sustained note; back glides down.
+     */
+    case 'hud': {
+      const wet = echo(ctx, out, 0.075, 0.28);
+      const note = (at: number, f: number, to: number, p: number, d: number) => {
+        smooth(ctx, out, wet, at, f, to, p, 0.008, d);
+        smooth(ctx, out, wet, at, f * 1.006, to * 1.006, p * 0.6, 0.008, d);
+        smooth(ctx, out, wet, at + 0.01, to * 1.5, to * 1.5, p * 0.18, 0.012, d * 1.2);
+      };
+      if (k === 0) note(t, 1046, 1175, 0.16, 0.09);
+      if (k === 1) { note(t, 880, 1046, 0.14, 0.08); note(t + 0.06, 1318, 1397, 0.15, 0.16); }
+      if (k === 2) { note(t, 1175, 1046, 0.14, 0.08); note(t + 0.055, 880, 784, 0.14, 0.13); }
+      break;
+    }
+    case 'holo': {
+      const wet = echo(ctx, out, 0.09, 0.32);
+      const [from, to, d] = ([[740, 784, 0.12], [660, 988, 0.17], [880, 587, 0.15]] as const)[k]!;
+      smooth(ctx, out, wet, t, from, to, [0.2, 0.22, 0.2][k]!, 0.012, d, { vibrato: 11, depth: from * 0.012 });
+      smooth(ctx, out, wet, t, from * 2, to * 2, 0.035, 0.014, d * 0.8, { vibrato: 11, depth: from * 0.02 });
+      breath(ctx, out, t, 0.06, 0.02, d * 0.7, (from + to) * 1.2);
+      break;
+    }
+    case 'scan': {
+      const wet = echo(ctx, out, 0.065, 0.25);
+      const [f, cutFrom, cutTo, d] = ([[523, 700, 2600, 0.1], [440, 600, 3400, 0.16], [587, 2600, 600, 0.13]] as const)[k]!;
+      swell(ctx, out, wet, t, f, cutFrom, cutTo, [0.2, 0.22, 0.2][k]!, d);
+      if (k === 1) smooth(ctx, out, wet, t + 0.07, 1318, 1318, 0.07, 0.012, 0.14);
+      break;
+    }
     case 'off':
       break;
   }
@@ -186,7 +299,7 @@ async function prerender(style: SoundStyle) {
   const set: Partial<Record<SoundKind, AudioBuffer>> = {};
   clips.set(style, set);
   for (const kind of ['move', 'select', 'back'] as const) {
-    const off = new OfflineAudioContext(1, Math.ceil(live.sampleRate * 0.35), live.sampleRate);
+    const off = new OfflineAudioContext(1, Math.ceil(live.sampleRate * 0.5), live.sampleRate);
     renderSound(off, off.destination, style, kind, 0.005);
     set[kind] = await off.startRendering();
   }
