@@ -1,8 +1,8 @@
 {
-  "versionCode": 10,
-  "versionName": "0.4.2",
-  "sha256": "121e68eb6fdde674a3cad821ee0d28ea5a2bcd740c615b3f90a3748c8c8e8bc9",
-  "notes": "Smoother navigation; adds Settings → System → Show frame rate.",
-  "publishedAt": "2026-11-07T00:54:09.302Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.4.2.apk"
+  "versionCode": 11,
+  "versionName": "0.5.0",
+  "sha256": "838039b31a3a83eba43850896592a6ed780922a199bfb9c43fd896db45fc847f",
+  "notes": "Boot animation, NOIR screensaver, Now Playing view on Home, navigation sounds, lamp button fixes.",
+  "publishedAt": "2026-11-07T02:06:39.077Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.0.apk"
 }
