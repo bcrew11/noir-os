@@ -1,8 +1,8 @@
 {
-  "versionCode": 17,
-  "versionName": "0.5.6",
-  "sha256": "c643e9a9da4dc33ca7625252aa3c53f6137299c744c7e076e4b24d66c83e0fc2",
-  "notes": "Smoother, crisper start-up animation; saved Netflix shows open on the show's page; weather appears as soon as it's set up (and next to the clock); iPhone 'Save to NOIR' Shortcut support.",
-  "publishedAt": "2026-11-07T05:26:40.353Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.6.apk"
+  "versionCode": 18,
+  "versionName": "0.5.7",
+  "sha256": "6e38d4c1e6ce3826b7eb75f0b173fc2f1382ddb42362b13fbd1406e971ec5f86",
+  "notes": "Sharper album covers (full-size art from your music app); the light behind the cover stays and fades smoothly between songs.",
+  "publishedAt": "2026-11-07T05:29:52.416Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.7.apk"
 }
