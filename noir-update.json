@@ -1,8 +1,8 @@
 {
-  "versionCode": 13,
-  "versionName": "0.5.2",
-  "sha256": "f74a459bf203226ed65595c24186e0ae672d1eecbcb1f52d05b1296e5cd2fa7b",
-  "notes": "Reworked keyboard sounds: Thock, Tactile and Creamy no longer boom.",
-  "publishedAt": "2026-11-07T02:26:02.216Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.2.apk"
+  "versionCode": 14,
+  "versionName": "0.5.3",
+  "sha256": "1bf76ddb730b7f29a762ad360145e7b13743b29a6f6ecf5341c5dc693c3b5eb7",
+  "notes": "Phone remote: open NOIR on your iPhone from Settings → Devices → Connect your phone (no computer needed). Lights, app shortcuts and settings from the phone.",
+  "publishedAt": "2026-11-07T02:44:05.602Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.3.apk"
 }
