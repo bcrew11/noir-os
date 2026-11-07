@@ -19,6 +19,14 @@
         android:icon="@drawable/banner"
         android:theme="@style/Theme.Noir"
         android:networkSecurityConfig="@xml/network_security_config">
+        <!-- Settings → System → Restart NOIR: a helper in its own process that relaunches NOIR fresh. -->
+        <activity
+            android:name=".RestartActivity"
+            android:process=":restart"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

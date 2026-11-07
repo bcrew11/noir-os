@@ -322,6 +322,10 @@ class MainActivity : Activity() {
         fun phoneUrl(): String? = if (phoneServer == null) null else lanAddress()?.let { "http://$it:$phonePort/phone/" }
 
         /** The start-up sound (pre-rendered, bundled with the page), played natively so autoplay rules don't apply. */
+        /** Settings → System → Restart NOIR: a full restart (fresh process), intro included. */
+        @JavascriptInterface
+        fun restart() = runOnUiThread { RestartActivity.restart(this@MainActivity) }
+
         /** The page mirrors the settings the native intro needs (read at the next launch, before the page loads). */
         @JavascriptInterface
         fun setIntroPrefs(motion: String, sound: Boolean, volume: Float) {

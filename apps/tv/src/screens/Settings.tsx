@@ -484,6 +484,8 @@ function SystemSection({ s }: { s: NoirState }) {
         {!standalone && <FRow id="sy-refresh" icon={RefreshCw} title="Refresh TV state, logos and photos" onSelect={() => void api('/api/tv/refresh', { body: {} }).then(() => pushToast({ tone: 'success', title: 'Refreshed' }))} />}
       </Group>
       <Group title="Recovery">
+        <FRow id="sy-restart" icon={RefreshCw} title="Restart NOIR" hint={standalone ? 'Starts NOIR fresh, with the start-up intro. Use it if something seems stuck.' : 'Reloads NOIR on this screen.'}
+          onSelect={() => { const b = androidBridge(); if (b?.restart) b.restart(); else location.reload(); }} />
         <FRow id="sy-recover" icon={LifeBuoy} title="Getting back to the standard interface" hint={standalone
           ? 'NOIR never modifies your TV. To use the Google TV home again, open Android settings → Apps → NOIR → Uninstall, or see docs/DEPLOYMENT.md (Recovery).'
           : 'NOIR never modifies your TV. Press the Home button on the TV remote, or switch inputs, to return to VIZIO OS at any time.'} />
