@@ -33,10 +33,7 @@ export function Header() {
   const settings = useNoir((s) => s.state?.settings);
   const tv = useNoir((s) => s.state?.tv);
   const conn = useNoir((s) => s.status);
-  const go = useUI((s) => s.go);
   const clock = formatClock(now, settings?.appearance.clock24h ?? false);
-  const gear = useFocusable<HTMLButtonElement>('header-settings', { group: 'header', onSelect: () => go('settings') });
-  const level = useMotion();
 
   const linkOk = conn === 'online';
   const tvOk = tv?.adapter === 'mock' || (tv?.adapter === 'vizio' && tv.reachable);
@@ -59,11 +56,6 @@ export function Header() {
         <span className="text-[1.75rem] font-normal tabular-nums tracking-tight text-fg">
           {clock.time}{clock.suffix && <span className="ml-1.5">{clock.suffix}</span>}
         </span>
-        <span className="h-9 w-px bg-line-strong" />
-        <button ref={gear.ref} {...gear.pointer} data-focused={gear.focused || undefined} tabIndex={-1} aria-label="Settings" style={focusLift(gear.focused, level, 1.12, 0, 'rotate(30deg)')}
-          className={cx('grid size-13 place-items-center rounded-full transition-colors', gear.focused ? 'bg-white/14 focus-ring text-fg' : 'text-fg/90')}>
-          <Settings className="size-8" strokeWidth={1.6} />
-        </button>
       </div>
     </header>
   );
