@@ -1,7 +1,7 @@
 import { AnimatePresence } from 'motion/react';
 import {
   Activity, Clock, Cpu, Download, Grid2x2, Image, LifeBuoy, Link2, Monitor, MountainSnow, Music2, Palette, Power, RefreshCw, RotateCcw, Search, Smartphone,
-  Sparkles, Trash2, Tv, Wifi,
+  Lightbulb, Sparkles, Trash2, Tv, Wifi,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ACCENTS, AMBIENT_THEMES, BACKGROUNDS, findApp, type AccentId, type NoirState } from '@noir/core';
@@ -9,6 +9,7 @@ import { api, patchSettings, pushToast, useNoir } from '@noir/ui';
 import { Dialog } from '../components/Dialog.tsx';
 import { Background } from '../components/Background.tsx';
 import { PickerHost, PickerValue, openPicker, type Choice } from '../components/Picker.tsx';
+import { SmartHomeSettings } from '../components/SmartHome.tsx';
 import { Keyboard } from '../components/Keyboard.tsx';
 import { FButton, FRow, Pill, Toggle, cx } from '../components/primitives.tsx';
 import { useFocusable } from '../focus/focus.ts';
@@ -24,6 +25,7 @@ const SECTIONS = [
   { id: 'devices', label: 'Devices', icon: Tv },
   { id: 'music', label: 'Music', icon: Music2 },
   { id: 'ambient', label: 'Ambient', icon: MountainSnow },
+  { id: 'smart', label: 'Smart Home', icon: Lightbulb },
   { id: 'system', label: 'System', icon: Cpu },
 ] as const;
 
@@ -456,6 +458,7 @@ export default function Settings() {
         {section === 'devices' && (isStandalone() ? <ThisDevice s={state} /> : <Devices s={state} />)}
         {section === 'music' && <MusicSection s={state} />}
         {section === 'ambient' && <AmbientSection s={state} />}
+        {section === 'smart' && <SmartHomeSettings />}
         {section === 'system' && <SystemSection s={state} />}
       </section>
       <PickerHost />

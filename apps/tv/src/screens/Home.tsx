@@ -5,6 +5,7 @@ import { useNoir, useNow } from '@noir/ui';
 import { AddAppsCard, AppCard } from '../components/AppCard.tsx';
 import { AppOptions } from '../components/AppOptions.tsx';
 import { InputWidget, MusicWidget } from '../components/widgets.tsx';
+import { SmartHomeWidget } from '../components/SmartHome.tsx';
 import { Pill } from '../components/primitives.tsx';
 import { launchApp, launchReadiness, useFavorites } from '../lib/apps.ts';
 import { useScreenFocus } from '../hooks/useScreenFocus.ts';
@@ -20,7 +21,7 @@ export default function Home() {
   const defaultFocus = settings?.home.defaultFocus;
   useScreenFocus('home', favorites.some((f) => f.id === defaultFocus) ? `app-${defaultFocus}` : favorites[0] ? `app-${favorites[0].id}` : 'home-add');
 
-  const showWidgets = settings && (settings.home.showMusicWidget || settings.home.showInputWidget);
+  const showWidgets = settings && (settings.home.showMusicWidget || settings.home.showInputWidget || (settings.smartHome.showOnHome && settings.smartHome.devices.length > 0));
 
   return (
     <div className="flex h-full flex-col">
@@ -57,6 +58,7 @@ export default function Home() {
         <section className="mt-9 flex gap-8">
           {settings.home.showMusicWidget && <MusicWidget />}
           {settings.home.showInputWidget && <InputWidget />}
+          <SmartHomeWidget />
         </section>
       )}
       <div className="flex-1" />

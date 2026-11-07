@@ -76,6 +76,7 @@ class MainActivity : Activity() {
         }
         setContentView(web)
         Updater.check()
+        acceptGoveeKey(intent)
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         load()
@@ -108,8 +109,20 @@ class MainActivity : Activity() {
         Updater.check() // at most every 6 hours
     }
 
+    /**
+     * Lets the Govee key be set from a computer instead of typing it with the remote:
+     *   adb shell am start -n app.noir.launcher/.MainActivity --es govee_key <KEY>
+     */
+    private fun acceptGoveeKey(intent: Intent?) {
+        val k = intent?.getStringExtra("govee_key") ?: return
+        Govee.setKey(this, k)
+        intent.removeExtra("govee_key")
+        web.post { web.evaluateJavascript("window.dispatchEvent(new Event('noir-smart-home'))", null) }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (intent.hasExtra("govee_key")) { acceptGoveeKey(intent); return }
         // HOME pressed while NOIR is the launcher: go to NOIR's own Home screen.
         web.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Home'}))", null)
     }
@@ -228,6 +241,21 @@ class MainActivity : Activity() {
             runOnUiThread { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             true
         } catch (e: Exception) { false }
+
+        @JavascriptInterface
+        fun goveeHasKey(): Boolean = Govee.hasKey(this@MainActivity)
+
+        @JavascriptInterface
+        fun goveeSetKey(key: String) = Govee.setKey(this@MainActivity, key)
+
+        /** Async: result arrives via window.__noirNative(callbackId, status, body). */
+        @JavascriptInterface
+        fun goveeRequest(callbackId: String, method: String, path: String, body: String?) {
+            Govee.request(this@MainActivity, method, path, body) { status, text ->
+                val js = "window.__noirNative && window.__noirNative(${JSONObject.quote(callbackId)}, $status, ${JSONObject.quote(text)})"
+                runOnUiThread { web.evaluateJavascript(js, null) }
+            }
+        }
 
         @JavascriptInterface
         fun updateStatus(): String = Updater.status().toString()

@@ -14,6 +14,9 @@ export interface AndroidBridge {
   openNotificationAccess(): boolean;
   openSystemSettings(): void;
   updateStatus?(): string;
+  goveeHasKey?(): boolean;
+  goveeSetKey?(key: string): void;
+  goveeRequest?(callbackId: string, method: string, path: string, body: string | null): void;
   checkForUpdate?(): void;
   installUpdate?(): void;
 }

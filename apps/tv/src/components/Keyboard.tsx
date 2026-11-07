@@ -2,7 +2,7 @@ import { Delete, Space } from 'lucide-react';
 import { useFocusable } from '../focus/focus.ts';
 import { cx } from './primitives.tsx';
 
-const ALPHA = ['abcdefg', 'hijklmn', 'opqrstu', 'vwxyz12', '3456789'];
+const ALPHA = ['abcdefg', 'hijklmn', 'opqrstu', 'vwxyz01', '2345678', '9-'];
 const NUMERIC = ['123', '456', '789', '.0'];
 
 function Key({ id, label, onPress, wide, icon: Icon }: { id: string; label: string; onPress: () => void; wide?: boolean; icon?: typeof Delete }) {

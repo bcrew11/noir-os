@@ -76,6 +76,11 @@ export const SettingsSchema = z.object({
     provider: z.enum(['demo', 'spotify']).default('demo'),
     showArtwork: z.boolean().default(true),
   }).default({}),
+  smartHome: z.object({
+    /** Lights shown as one-press toggles on Home (Govee devices, identified by device id + model). */
+    devices: z.array(z.object({ device: z.string().max(64), sku: z.string().max(32), name: z.string().max(60) })).max(8).default([]),
+    showOnHome: z.boolean().default(true),
+  }).default({}),
   weather: z.object({
     latitude: z.number().min(-90).max(90).nullable().default(null),
     longitude: z.number().min(-180).max(180).nullable().default(null),
