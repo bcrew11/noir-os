@@ -154,12 +154,16 @@ export function focusFirstWithin(container: Element | null): boolean {
   return focus(first.id);
 }
 
+const ROW_GROUPS = new Set(['nav']);
+
 export function move(dir: Direction): boolean {
   const scope = activeScope();
   const { focusedId } = useFocusStore.getState();
   const cur = focusedId ? nodes.get(focusedId) : undefined;
   if (!cur || cur.scope !== scope || !cur.el.isConnected) return focus(scopeMemory.get(scope) ?? firstIn(scope));
-  const candidates = navigable(scope).filter((n) => n.id !== cur.id);
+  let candidates = navigable(scope).filter((n) => n.id !== cur.id);
+  // The bottom nav bar is a row you only leave by pressing Up: Left/Right stop at its ends.
+  if (cur.group && ROW_GROUPS.has(cur.group) && (dir === 'left' || dir === 'right')) candidates = candidates.filter((n) => n.group === cur.group);
   const from = settledRect(cur.el);
   const toCand = (list: Node[]) => list.map((n) => ({ id: n.id, rect: settledRect(n.el) }));
   // Stay inside the current scrolling list while it has somewhere to go (rows scrolled off the

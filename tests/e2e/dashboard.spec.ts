@@ -114,3 +114,16 @@ test('OK on a Settings section moves focus to the top of its settings', async ({
   await expect(panel.locator('[data-focused]')).toHaveText(/^Arrange apps/);
   expect(await panel.evaluate((p) => p.scrollTop)).toBe(0);
 });
+
+test('Left/Right at the ends of the nav bar stay in the nav bar', async ({ page }) => {
+  await page.goto(TV);
+  await expect(page.locator('[data-app="youtube-tv"]')).toHaveAttribute('data-focused', 'true');
+  await page.keyboard.press('h'); // Home on Home → nav bar
+  await expect(page.locator('nav [data-focused]')).toHaveText(/Home/);
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('nav [data-focused]')).toHaveText(/Home/);
+  for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
+  await expect(page.locator('nav [data-focused]')).toHaveText(/Settings/);
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('nav [data-focused]')).toHaveCount(0);
+});
