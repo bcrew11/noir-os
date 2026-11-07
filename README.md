@@ -2,4 +2,4 @@
 
 Published builds of the NOIR Google TV launcher. Installed launchers read `noir-update.json`.
 
-Latest: **0.3.3**
+Latest: **0.3.4**
