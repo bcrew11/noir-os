@@ -354,6 +354,33 @@ class MainActivity : Activity() {
             }.start()
         }
 
+        /**
+         * Try several ways to open something, in order; the first one Android can resolve is used.
+         * Each: {data, action?, pkg?, component? "pkg/.Activity", flags?, extras?{k: string}}.
+         * Lets the page use app-specific deep links (e.g. Netflix's netflix://title/<id>).
+         */
+        @JavascriptInterface
+        fun openIntents(json: String): String {
+            val list = try { JSONArray(json) } catch (e: Exception) { return JSONObject(mapOf("ok" to false, "message" to "Bad request")).toString() }
+            for (i in 0 until list.length()) {
+                val o = list.optJSONObject(i) ?: continue
+                val uri = Uri.parse(o.optString("data"))
+                if (uri.scheme == null || uri.scheme == "javascript" || uri.scheme == "file" || uri.scheme == "content") continue
+                val intent = Intent(o.optString("action", Intent.ACTION_VIEW), uri)
+                o.optString("pkg").takeIf { it.isNotEmpty() }?.let { intent.setPackage(it) }
+                o.optString("component").takeIf { it.contains('/') }?.let { intent.component = ComponentName.unflattenFromString(it) }
+                intent.addFlags(if (o.has("flags")) o.optInt("flags") else Intent.FLAG_ACTIVITY_NEW_TASK)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                o.optJSONObject("extras")?.let { ex -> ex.keys().forEach { k -> intent.putExtra(k, ex.optString(k)) } }
+                if (intent.resolveActivity(packageManager) == null) continue
+                return try {
+                    runOnUiThread { startActivity(intent) }
+                    JSONObject(mapOf("ok" to true, "message" to "Opened", "step" to i)).toString()
+                } catch (e: Exception) { continue }
+            }
+            return JSONObject(mapOf("ok" to false, "message" to "No app on this device can open that")).toString()
+        }
+
         /** Open a link in a specific app (falls back to whatever app handles it). */
         @JavascriptInterface
         fun openUrl(url: String, pkg: String?): String {

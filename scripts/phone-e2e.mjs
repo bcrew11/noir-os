@@ -36,6 +36,7 @@ await tv.addInitScript((port) => {
     phoneUrl: () => `http://127.0.0.1:${port}/phone/`,
     fetchMeta: (cb) => setTimeout(() => window.__noirNative(cb, JSON.stringify({ title: 'Test Video Title', image: 'https://i.ytimg.com/vi/abc123def45/hqdefault.jpg' }), null), 50),
     openUrl: (url, pkg) => { window.__launched.push(`url:${pkg}:${url}`); return '{"ok":true,"message":"Opened"}'; },
+    openIntents: (json) => { const st = JSON.parse(json)[0]; window.__launched.push(`url:${st.pkg}:${st.data}`); return '{"ok":true,"message":"Opened"}'; },
     phoneRespond: (id, status, body) => window.__respond(id, status, body),
     phoneSend: (cid, text) => window.__send(cid, text),
     phoneClose: (cid) => window.__close(cid),
@@ -137,6 +138,12 @@ try {
   await phone.getByRole('button', { name: 'Thock' }).click();
   await tv.waitForFunction(() => JSON.parse(localStorage.getItem('noir.settings') ?? '{}').sound?.style === 'thock', null, { timeout: 4000 }).then(() => check(true, 'phone setting saved on TV'), () => check(false, 'phone setting saved on TV'));
   check(!(await phone.getByText('Custom shortcut').isVisible()), 'custom shortcut (server-only) hidden');
+  // Weather: set location + toggle on the phone while NOIR is running; it should appear right away.
+  await tv.route('https://api.open-meteo.com/**', (r) => r.fulfill({ contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ current: { temperature_2m: 21.5, weather_code: 1 } }) }));
+  await phone.getByLabel('Latitude').fill('32.60'); await phone.getByLabel('Longitude').click();
+  await phone.getByLabel('Longitude').fill('-85.48'); await phone.getByLabel('Latitude').click();
+  await phone.getByRole('button', { name: /Show weather/ }).click();
+  await tv.getByText(/71°F · /).first().waitFor({ timeout: 6000 }).then(() => check(true, 'weather shows on the TV right after setting it up'), () => check(false, 'weather shows on the TV right after setting it up'));
 
   // Settings change on the TV is pushed to the phone.
   await tab('Devices');
@@ -186,6 +193,12 @@ try {
   await phone.getByRole('button', { name: 'Try syncing now' }).click();
   await phone.getByText('Waiting to sync').waitFor({ state: 'detached', timeout: 6000 }).then(() => check(true, 'queued link synced'), () => check(false, 'queued link synced'));
   const tvSaved2 = await tv.evaluate(() => JSON.parse(localStorage.getItem('noir.saved') ?? '[]'));
+  await tv.evaluate(() => { window.__launched = []; });
+  for (let i = 0; i < 40 && await phone.getByRole('button', { name: /^Watch / }).count() < 2; i++) await phone.waitForTimeout(100);
+  await phone.getByRole('button', { name: /^Watch / }).first().click();
+  await phone.waitForTimeout(500);
+  const nf = (await tv.evaluate(() => window.__launched))[0];
+  check(nf === 'url:com.netflix.ninja:netflix://title/80057281', `Netflix opens on the title's page (${nf})`);
   check(tvSaved2.length === 2 && tvSaved2[0].appId === 'netflix', 'TV has the Netflix link on top');
   // iPhone Shortcut: create a key from the phone, then POST a queued file the way Shortcuts will.
   await phone.getByRole('button', { name: /Save from anywhere/ }).click();

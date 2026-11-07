@@ -23,6 +23,7 @@ export interface AndroidBridge {
   /** Watch later: page title/thumbnail (async, via __noirNative) and opening a link in an app. */
   fetchMeta?(callbackId: string, url: string): void;
   openUrl?(url: string, pkg: string | null): string;
+  openIntents?(json: string): string;
   keyServiceEnabled?(): boolean;
   openAccessibilitySettings?(): boolean;
   learnKey?(callbackId: string): void;

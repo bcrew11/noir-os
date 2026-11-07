@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, Bookmark, CheckCircle2, Download, FlaskConical, Gamepad2, Grid2x2, Home, Info, Monitor, MountainSnow, Music2, Settings, Tv, Wifi, WifiOff, XCircle } from 'lucide-react';
-import { formatClock, type InputIcon } from '@noir/core';
+import { formatClock, weatherLabel, type InputIcon } from '@noir/core';
 import { useNoir, useNow } from '@noir/ui';
 import { Camera, Disc3, Laptop, Speaker, Cast } from 'lucide-react';
 import { setGroupPreferred, useFocusStore, useFocusable } from '../focus/focus.ts';
@@ -32,6 +32,7 @@ export function Header() {
   const now = useNow();
   const settings = useNoir((s) => s.state?.settings);
   const tv = useNoir((s) => s.state?.tv);
+  const weather = useNoir((s) => s.state?.weather);
   const conn = useNoir((s) => s.status);
   const clock = formatClock(now, settings?.appearance.clock24h ?? false);
   const go = useUI((s) => s.go);
@@ -57,6 +58,11 @@ export function Header() {
           {(standalone ? navigator.onLine : linkOk && tvOk) ? <Wifi className="size-6" strokeWidth={1.75} /> : <WifiOff className="size-6 text-amber-300/90" strokeWidth={1.75} />}
           <span className="text-[1rem]">{statusLabel}</span>
         </div>
+        {settings?.ambient.showWeather && weather && (
+          <span className="text-[1.35rem] text-fg-muted" title={weatherLabel(weather.code)}>
+            {Math.round(settings.weather.units === 'fahrenheit' ? weather.tempC * 1.8 + 32 : weather.tempC)}°{settings.weather.units === 'fahrenheit' ? 'F' : 'C'} · {weatherLabel(weather.code)}
+          </span>
+        )}
         <span className="text-[1.75rem] font-normal tabular-nums tracking-tight text-fg">
           {clock.time}{clock.suffix && <span className="ml-1.5">{clock.suffix}</span>}
         </span>

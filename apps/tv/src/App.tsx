@@ -36,6 +36,10 @@ export function App() {
   // Boot intro: once per launch (page load), never when animation is off.
   const [booting, setBooting] = useState(() => !new URLSearchParams(location.search).has('noboot'));
   const endBoot = useCallback(() => setBooting(false), []);
+  // While the intro fully covers the screen, Home is mounted (so it's ready) but not painted: its
+  // animated background and entrance motion would otherwise compete with the intro on a stick.
+  const [homeVisible, setHomeVisible] = useState(!booting);
+  const revealHome = useCallback(() => setHomeVisible(true), []);
   const [nowPlaying, exitNowPlaying] = useNowPlayingIdle();
 
   useEffect(() => {
@@ -72,6 +76,7 @@ export function App() {
   const ambient = screen === 'ambient';
   return (
     <div className="absolute inset-0 overflow-hidden bg-ink-900">
+      <div className="contents" style={homeVisible || motionLevel === 'off' ? undefined : { visibility: 'hidden' }}>
       <Background variant={state.settings.appearance.background} />
       {/* 1920×1080 canvas, centered and letterboxed for non-16:9 displays */}
       <div className="absolute left-1/2 top-1/2 h-[67.5rem] w-[120rem] -translate-x-1/2 -translate-y-1/2">
@@ -99,6 +104,7 @@ export function App() {
         </div>
         <Toasts />
       </div>
+      </div>
       <AnimatePresence>
         {nowPlaying && <NowPlayingView key="now-playing" onExit={exitNowPlaying} />}
       </AnimatePresence>
@@ -110,7 +116,7 @@ export function App() {
       <PhonePairingOverlay />
       {sim && <RemoteSimulator />}
       {state.settings.appearance.showFps && <FpsMeter />}
-      {booting && motionLevel !== 'off' && <BootIntro level={motionLevel} onDone={endBoot} />}
+      {booting && motionLevel !== 'off' && <BootIntro level={motionLevel} onReveal={revealHome} onDone={endBoot} />}
       {status !== 'online' && <ConnectionBanner status={status} />}
     </div>
   );

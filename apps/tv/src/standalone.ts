@@ -147,6 +147,8 @@ export function startStandalone() {
       settings = applySettingsPatch(settings, patch);
       saveSettings(settings);
       publish();
+      // A new location (or turning weather on) should show up now, not at the next 30-minute refresh.
+      if (patch.weather || patch.ambient?.showWeather) void weather();
     },
     async api(path, init) {
       if (path === '/api/tv/refresh') { apps = discoverApps(); publish(); return {}; }
@@ -192,6 +194,7 @@ export function startStandalone() {
     if (w.latitude == null || w.longitude == null || !settings.ambient.showWeather) return;
     try {
       const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${w.latitude}&longitude=${w.longitude}&current=temperature_2m,weather_code`);
+      if (!r.ok) return;
       const j = (await r.json()) as { current: { temperature_2m: number; weather_code: number } };
       const cur = useNoir.getState().state;
       if (cur) useNoir.setState({ state: { ...cur, weather: { tempC: j.current.temperature_2m, code: j.current.weather_code, updatedAt: Date.now() } } });
@@ -199,4 +202,5 @@ export function startStandalone() {
   };
   void weather();
   setInterval(() => void weather(), 30 * 60_000);
+  window.addEventListener('online', () => void weather());
 }

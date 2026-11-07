@@ -10,6 +10,25 @@ const SPARKS = Array.from({ length: 14 }, (_, i) => ({
   size: 0.35 + ((i * 3) % 4) * 0.12,
 }));
 
+/** A small tile of soft noise (made once): dithers the big dark gradients so they don't band. */
+let grainUrl: string | null = null;
+function grain(): string {
+  if (grainUrl) return grainUrl;
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d')!;
+    const img = g.createImageData(128, 128);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.random() * 255;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    grainUrl = `url("${c.toDataURL()}")`;
+  } catch { grainUrl = 'none'; }
+  return grainUrl;
+}
+
 /**
  * Start-up sequence (~6.5 s), played once per launch on top of the already-rendered Home screen.
  * Told as a small story: sparks gather into a point of light → it ignites into the NOIR mark with a
@@ -17,7 +36,7 @@ const SPARKS = Array.from({ length: 14 }, (_, i) => ({
  * intro lifts away. Pure CSS keyframes on transform/opacity, so it stays smooth on a streaming
  * stick. Any button skips it. Reduced motion gets a short, calm fade instead.
  */
-export function BootIntro({ level, onDone }: { level: MotionLevel; onDone: () => void }) {
+export function BootIntro({ level, onReveal, onDone }: { level: MotionLevel; onReveal?: () => void; onDone: () => void }) {
   const [leaving, setLeaving] = useState(false);
   const full = level === 'full';
   const total = full ? 6200 : 900;
@@ -34,15 +53,17 @@ export function BootIntro({ level, onDone }: { level: MotionLevel; onDone: () =>
   }, []);
 
   useEffect(() => {
+    // Let Home paint a moment before the intro lifts away, so the reveal itself doesn't hitch.
+    const reveal = setTimeout(() => onReveal?.(), Math.max(0, total - 700));
     const leave = setTimeout(() => setLeaving(true), total);
     const done = setTimeout(onDone, total + 550);
     // A press during the intro skips it (and isn't passed on to Home).
-    const off = interceptNav(() => { setLeaving(true); setTimeout(onDone, 300); return true; });
-    return () => { clearTimeout(leave); clearTimeout(done); off(); };
-  }, [total, onDone]);
+    const off = interceptNav(() => { onReveal?.(); setLeaving(true); setTimeout(onDone, 300); return true; });
+    return () => { clearTimeout(reveal); clearTimeout(leave); clearTimeout(done); off(); };
+  }, [total, onDone, onReveal]);
 
   return (
-    <div className={`boot ${full ? '' : 'boot-reduced'} ${leaving ? 'boot-leave' : ''}`} aria-hidden>
+    <div className={`boot ${full ? '' : 'boot-reduced'} ${leaving ? 'boot-leave' : ''}`} aria-hidden style={{ '--grain': grain() } as React.CSSProperties}>
       <div className="boot-glow" />
       {full && (
         <>
@@ -75,9 +96,11 @@ export function BootIntro({ level, onDone }: { level: MotionLevel; onDone: () =>
           {'NOIR'.split('').map((ch, i) => <span key={i} style={{ animationDelay: `${full ? 3550 + i * 170 : 0}ms` }}>{ch}</span>)}
           {/* A glowing copy of the wordmark that fades in and out: the letters "light up". */}
           <span className="boot-shine" aria-hidden>NOIR</span>
-          <span className="boot-sweep" aria-hidden />
+          {/* Light that sweeps across the letters themselves (clipped to the text). */}
+          <span className="boot-sweep" aria-hidden>NOIR</span>
         </div>
       </div>
+      {full && <div className="boot-grain" />}
     </div>
   );
 }

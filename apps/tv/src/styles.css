@@ -105,32 +105,36 @@ html.low-perf .focus-ring {
     color-mix(in srgb, var(--noir-primary) 10%, transparent) 48%,
     color-mix(in srgb, var(--noir-primary) 4%, transparent) 70%,
     transparent 100%);
-  opacity: 0; transform: scale(0.3);
-  animation: boot-glow 1900ms 1450ms var(--ease-noir) forwards;
+  opacity: 0;
+  animation: boot-fade 2200ms 1400ms var(--ease-noir) forwards;
 }
+/* Fine static grain over the gradients: breaks up 8-bit banding on TV panels (rasterized once). */
+.boot-grain { inset: 0; position: absolute; translate: none; left: 0; top: 0; width: 100%; height: 100%; opacity: 0.07; background-image: var(--grain); background-size: 128px 128px; pointer-events: none; }
 
 .boot-sparks { width: 0; height: 0; }
 .boot-sparks > span {
-  position: absolute; left: 0; top: 0; border-radius: 9999px; background: var(--noir-highlight);
-  box-shadow: 0 0 0.8rem var(--noir-accent);
+  position: absolute; left: 0; top: 0; border-radius: 9999px;
+  background: radial-gradient(circle, #fff 0%, var(--noir-highlight) 35%, color-mix(in srgb, var(--noir-accent) 40%, transparent) 60%, transparent 72%);
+  will-change: transform, opacity;
   opacity: 0; transform: rotate(var(--a)) translate3d(var(--d), 0, 0);
   animation: boot-spark 1150ms cubic-bezier(0.55, 0, 0.3, 1) forwards;
 }
 .boot-core {
-  width: 1.6rem; height: 1.6rem; border-radius: 9999px;
-  background: radial-gradient(circle, #fff 0%, var(--noir-highlight) 40%, transparent 72%);
-  box-shadow: 0 0 2.5rem 0.6rem var(--noir-accent);
+  width: 8rem; height: 8rem; border-radius: 9999px;
+  background: radial-gradient(circle, #fff 0%, #fff 8%, var(--noir-highlight) 16%, color-mix(in srgb, var(--noir-accent) 55%, transparent) 30%, color-mix(in srgb, var(--noir-accent) 18%, transparent) 50%, transparent 70%);
   opacity: 0; transform: scale(0);
   animation: boot-core 1900ms 300ms var(--ease-noir) forwards;
 }
 .boot-wave {
-  width: 30rem; height: 30rem; border-radius: 9999px;
-  border: 0.18rem solid color-mix(in srgb, var(--noir-highlight) 70%, transparent);
-  box-shadow: 0 0 2rem color-mix(in srgb, var(--noir-accent) 45%, transparent), inset 0 0 2rem color-mix(in srgb, var(--noir-accent) 30%, transparent);
-  opacity: 0; transform: scale(0.08);
+  width: 108rem; height: 108rem; border-radius: 9999px;
+  background: radial-gradient(circle closest-side, transparent 0%, transparent 90%,
+    color-mix(in srgb, var(--noir-accent) 28%, transparent) 95%, color-mix(in srgb, var(--noir-highlight) 75%, transparent) 97.5%,
+    color-mix(in srgb, var(--noir-accent) 25%, transparent) 99%, transparent 100%);
+  opacity: 0; transform: scale(0.022);
   animation: boot-wave 1300ms 1500ms cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
 }
 .boot-orbit {
+  will-change: transform, opacity;
   width: 62rem; height: 62rem; border-radius: 9999px;
   border: 0.1rem solid color-mix(in srgb, var(--noir-highlight) 22%, transparent);
   border-top-color: color-mix(in srgb, var(--noir-highlight) 55%, transparent);
@@ -147,8 +151,8 @@ html.low-perf .focus-ring {
   opacity: 0; transform: scale(0.15, 0.04);
   animation: boot-mark 900ms 1450ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
 }
-.boot-word { position: relative; overflow: hidden; padding: 0.4rem 0; margin-right: -0.45em; font-size: 5rem; font-weight: 500; letter-spacing: 0.45em; color: var(--color-fg); }
-.boot-word > span:not(.boot-shine):not(.boot-sweep) { display: inline-block; opacity: 0; transform: translate3d(0, 1.6rem, 0) scale(0.96); animation: boot-letter 800ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards; }
+.boot-word { position: relative; padding: 0.4rem 0; margin-right: -0.45em; font-size: 5rem; font-weight: 500; letter-spacing: 0.45em; color: var(--color-fg); }
+.boot-word > span:not(.boot-shine):not(.boot-sweep) { display: inline-block; will-change: transform, opacity; opacity: 0; transform: translate3d(0, 1.6rem, 0) scale(0.96); animation: boot-letter 800ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards; }
 .boot-shine {
   position: absolute; inset: 0.4rem 0 0.4rem 0; letter-spacing: inherit; white-space: nowrap;
   color: var(--noir-highlight);
@@ -157,10 +161,11 @@ html.low-perf .focus-ring {
   animation: boot-shine 1200ms 4750ms ease-in-out forwards;
 }
 .boot-sweep {
-  position: absolute; top: 0; bottom: 0; left: 0; width: 7rem;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55) 50%, transparent);
-  opacity: 0; transform: translate3d(-8rem, 0, 0) skewX(-12deg);
-  animation: boot-sweep 1000ms 4500ms cubic-bezier(0.45, 0, 0.25, 1) forwards;
+  position: absolute; inset: 0.4rem 0 0.4rem 0; letter-spacing: inherit; white-space: nowrap;
+  color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(100deg, transparent 42%, rgba(255, 255, 255, 0.95) 50%, transparent 58%);
+  background-size: 300% 100%; background-position: 100% 0; background-repeat: no-repeat;
+  animation: boot-sweep 1100ms 4500ms cubic-bezier(0.45, 0, 0.25, 1) forwards;
 }
 
 @keyframes boot-spark {
@@ -170,21 +175,25 @@ html.low-perf .focus-ring {
 }
 @keyframes boot-core {
   0% { opacity: 0; transform: scale(0); }
-  35% { opacity: 1; transform: scale(1); }
-  50% { transform: scale(1.5); }
-  62% { opacity: 1; transform: scale(0.9); }
-  80% { opacity: 1; transform: scale(2.2); }
-  100% { opacity: 0; transform: scale(0.4); }
+  35% { opacity: 1; transform: scale(0.45); }
+  50% { transform: scale(0.68); }
+  62% { opacity: 1; transform: scale(0.4); }
+  80% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.2); }
 }
-@keyframes boot-wave { 0% { opacity: 0.85; transform: scale(0.08); } 100% { opacity: 0; transform: scale(3.6); } }
-@keyframes boot-glow { to { opacity: 1; transform: scale(1); } }
+@keyframes boot-wave { 0% { opacity: 0.9; transform: scale(0.022); } 100% { opacity: 0; transform: scale(1); } }
 @keyframes boot-orbit-in { to { opacity: 1; } }
 @keyframes boot-orbit-spin { to { transform: var(--tilt) rotate(360deg); } }
 @keyframes boot-mark { 0% { opacity: 0; transform: scale(0.15, 0.04); } 40% { opacity: 1; } 100% { opacity: 1; transform: scale(1, 1); } }
 @keyframes boot-slide { to { transform: translate3d(0, 0, 0); } }
 @keyframes boot-letter { to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } }
 @keyframes boot-shine { 45% { opacity: 0.85; } 100% { opacity: 0; } }
-@keyframes boot-sweep { 0% { opacity: 0; transform: translate3d(-8rem, 0, 0) skewX(-12deg); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate3d(32rem, 0, 0) skewX(-12deg); } }
+@keyframes boot-sweep { from { background-position: 100% 0; } to { background-position: 0% 0; } }
+
+/* Streaming sticks (low-perf): fewer overlapping full-screen layers to blend each frame. */
+.low-perf .boot-grain, .low-perf .boot-orbit-b { display: none; }
+.low-perf .boot-glow { width: 80rem; height: 80rem; }
+.low-perf .boot-wave { width: 80rem; height: 80rem; }
 
 /* Reduced motion: a calm fade, no movement. */
 .boot-reduced .boot-glow { animation: none; opacity: 0.8; transform: none; }
@@ -192,4 +201,5 @@ html.low-perf .focus-ring {
 .boot-reduced .boot-mark { animation: boot-fade 400ms forwards; transform: none; }
 .boot-reduced .boot-word > span:not(.boot-shine):not(.boot-sweep) { animation: boot-fade 400ms forwards; transform: none; }
 .boot-reduced .boot-shine, .boot-reduced .boot-sweep { display: none; }
+.boot-reduced .boot-grain { display: none; }
 @keyframes boot-fade { to { opacity: 1; } }

@@ -62,6 +62,32 @@ export function removeSaved(id: string) {
   store(loadSaved().filter((s) => s.id !== id));
 }
 
+interface IntentStep { data: string; pkg?: string; component?: string; flags?: number; extras?: Record<string, string> }
+
+/** Netflix title id from title/watch/jbv links (share links look like netflix.com/title/80057281?s=i…). */
+export function netflixId(url: string): string | null {
+  return url.match(/netflix\.com\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?(?:title|watch)\/(\d+)/i)?.[1] ?? url.match(/[?&]jbv=(\d+)/)?.[1] ?? null;
+}
+
+/**
+ * How to open a saved link, best first. Most TV apps only open their home screen for a plain web
+ * link, so services with a known deep-link form get it tried first. Plain links stay as fallbacks.
+ */
+export function openSteps(url: string, appId: string | null, pkg: string | null): IntentStep[] {
+  const steps: IntentStep[] = [];
+  if (appId === 'netflix' && pkg) {
+    const id = netflixId(url);
+    if (id) {
+      // Netflix's TV app opens a title's page from its own scheme; `source=30` marks a launcher deep link.
+      steps.push({ data: `netflix://title/${id}`, pkg, extras: { source: '30' }, flags: 0x10008000 }); // NEW_TASK | CLEAR_TASK: jump there even if Netflix is already open
+      steps.push({ data: `https://www.netflix.com/title/${id}`, pkg, extras: { source: '30' } });
+    }
+  }
+  if (pkg) steps.push({ data: url, pkg });
+  steps.push({ data: url });
+  return steps;
+}
+
 /** Open in the service's own app when it's installed, else whatever app handles the link. */
 export function openSaved(item: SavedItem): CommandResult {
   const bridge = androidBridge();
@@ -72,6 +98,8 @@ export function openSaved(item: SavedItem): CommandResult {
     openInStore(app);
     return { status: 'unsupported', message: `${app.name} isn’t installed — opened Google Play on the TV.` };
   }
-  const r = JSON.parse(bridge.openUrl(item.url, pkg)) as { ok: boolean; message: string };
+  const r = JSON.parse(bridge.openIntents
+    ? bridge.openIntents(JSON.stringify(openSteps(item.url, item.appId, pkg)))
+    : bridge.openUrl(item.url, pkg)) as { ok: boolean; message: string };
   return r.ok ? { status: 'verified', message: `Opening in ${app?.name ?? 'the browser'}` } : { status: 'failed', message: r.message };
 }
