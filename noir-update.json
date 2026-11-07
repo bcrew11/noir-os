@@ -1,8 +1,8 @@
 {
-  "versionCode": 24,
-  "versionName": "0.5.13",
-  "sha256": "2f553b1638304bf48e728d50cfb9604040e9a44ebf872bd8bc31ee3db318c44b",
-  "notes": "New: Settings → System → Restart NOIR — starts NOIR fresh (with the start-up intro) if something seems stuck.",
-  "publishedAt": "2026-11-07T07:21:43.409Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.13.apk"
+  "versionCode": 25,
+  "versionName": "0.5.14",
+  "sha256": "257350f74ec2350d2c8b377be8830c6714f72a8e48a9732f67ac104cf098e498",
+  "notes": "Start-up intro now fades smoothly into Home (no freeze or cut). Fixed NOIR occasionally crashing when you leave YouTube or Netflix.",
+  "publishedAt": "2026-11-07T08:02:31.609Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.14.apk"
 }
