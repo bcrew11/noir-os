@@ -1,8 +1,8 @@
 {
-  "versionCode": 21,
-  "versionName": "0.5.10",
-  "sha256": "e42db5f815062c4bb91cbfc8048642361f3bc2feec14be954415a2c267db9909",
-  "notes": "Saved Netflix shows open straight to the show's page; start-up animation tuned for TV screens (no more blown-out glow); new start-up sound (switch it off in Settings → Appearance).",
-  "publishedAt": "2026-11-07T06:01:53.003Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.10.apk"
+  "versionCode": 22,
+  "versionName": "0.5.11",
+  "sha256": "945e61bf101074bafeecd78b3884712b2bd867010e7cfa272475ec776e4b8693",
+  "notes": "Start-up sound with more bass and a soft low hit as the logo appears.",
+  "publishedAt": "2026-11-07T06:04:04.644Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.11.apk"
 }
