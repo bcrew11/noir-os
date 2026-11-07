@@ -43,7 +43,7 @@ export function MusicWidget() {
       <div className="flex items-center gap-5">
         <FButton id="music-prev" group="widgets" variant="ghost" iconOnly icon={SkipBack} label="Previous" className="!h-14 !w-14 !px-0 rounded-full" disabled={disabled} onSelect={() => void command({ type: 'music.previous' }, { silent: true })} />
         <FButton id="music-play" group="widgets" variant="round" size="lg" label={music?.isPlaying ? 'Pause' : 'Play'} icon={music?.isPlaying ? Pause : Play} disabled={disabled}
-          className="!border-highlight/50 !bg-primary/25 shadow-[0_0_1.5rem_-0.3rem_var(--noir-accent)]" onSelect={() => void command({ type: 'music.playpause' }, { silent: true })} />
+          onSelect={() => void command({ type: 'music.playpause' }, { silent: true })} />
         <FButton id="music-next" group="widgets" variant="ghost" iconOnly icon={SkipForward} label="Next" className="!h-14 !w-14 !px-0 rounded-full" disabled={disabled} onSelect={() => void command({ type: 'music.next' }, { silent: true })} />
       </div>
       {track && (

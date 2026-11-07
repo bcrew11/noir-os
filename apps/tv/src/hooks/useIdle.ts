@@ -16,7 +16,7 @@ export function useIdle() {
 }
 
 /**
- * Home's music view: true when music is playing, Home is showing, and the remote has been idle for
+ * The music view: true when music is playing, Home or Music is showing, and the remote has been idle for
  * `home.nowPlayingAfterSec`. Returns [active, exit]. Exits once the music has stopped for 12 s.
  */
 export function useNowPlayingIdle(): [boolean, () => void] {
@@ -26,7 +26,7 @@ export function useNowPlayingIdle(): [boolean, () => void] {
   const [active, setActive] = useState(false);
   const exit = useCallback(() => setActive(false), []);
   useEffect(() => {
-    if (!after || screen !== 'home') { setActive(false); return; }
+    if (!after || (screen !== 'home' && screen !== 'music')) { setActive(false); return; }
     // Between songs, apps briefly report nothing playing: stay open unless it lasts a while.
     if (!playing) { const id = setTimeout(() => setActive(false), 12_000); return () => clearTimeout(id); }
     const id = setInterval(() => {
