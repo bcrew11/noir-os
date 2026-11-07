@@ -26,9 +26,12 @@ export function MusicWidget() {
   const pct = track ? (progress / track.durationMs) * 100 : 0;
   const disabled = !music?.canControl;
   return (
-    <div className="glass relative flex h-[8.75rem] flex-1 items-center gap-6 overflow-hidden rounded-[1.75rem] pl-6 pr-8">
-      <div ref={info.ref} {...info.pointer} data-focused={info.focused || undefined} style={focusLift(info.focused, level, 1.03, 0)}
-        className={cx('flex min-w-0 flex-1 cursor-pointer items-center gap-6 rounded-2xl p-2 -m-2 transition-colors', info.focused && 'bg-white/8 focus-ring')}>
+    // When the track info is focused, the whole card lights up (ring on the card's own edge). An inner
+    // highlight box would overflow the card's rounded, clipped corners and look broken.
+    <div className={cx('glass relative flex h-[8.75rem] flex-1 items-center gap-6 overflow-hidden rounded-[1.75rem] pl-6 pr-8 transition-[background,box-shadow] duration-200', info.focused && 'bg-white/10 focus-ring')}
+      style={focusLift(info.focused, level, 1.02, 0)}>
+      <div ref={info.ref} {...info.pointer} data-focused={info.focused || undefined}
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-6">
         <Artwork url={track?.artUrl} className="size-[6.2rem] rounded-2xl" />
         <div className="min-w-0">
           <div className="truncate text-[1.75rem] font-medium text-fg">{track?.title ?? 'Music'}</div>
