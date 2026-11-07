@@ -1,8 +1,8 @@
 {
-  "versionCode": 23,
-  "versionName": "0.5.12",
-  "sha256": "f713aa9c69cb59fb8a7faa595f383d9678a4376d340af365c8b920d08b9805a2",
-  "notes": "New start-up: a crisp, smooth 60 fps intro with its sound perfectly in sync (no more static or late/cut-off sound). Music: if Spotify was closed, Resume wakes it in the background, or offers to open it with one click.",
-  "publishedAt": "2026-11-07T07:19:25.851Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.12.apk"
+  "versionCode": 24,
+  "versionName": "0.5.13",
+  "sha256": "2f553b1638304bf48e728d50cfb9604040e9a44ebf872bd8bc31ee3db318c44b",
+  "notes": "New: Settings → System → Restart NOIR — starts NOIR fresh (with the start-up intro) if something seems stuck.",
+  "publishedAt": "2026-11-07T07:21:43.409Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.13.apk"
 }
