@@ -48,7 +48,6 @@ class MainActivity : Activity() {
     private lateinit var web: WebView
     private val prefs by lazy { getSharedPreferences("noir", MODE_PRIVATE) }
     private val bannerCache = HashMap<String, String?>()
-    private var artCache: Pair<String, String?>? = null
 
     private val bundledUrl = "https://appassets.androidplatform.net/assets/web/index.html"
     private fun serverUrl(): String? = prefs.getString("server", null)?.takeIf { it.isNotBlank() }
@@ -212,46 +211,24 @@ class MainActivity : Activity() {
 
         /** What's playing, from the active media session. Needs notification access (see MediaListener). */
         @JavascriptInterface
-        fun nowPlaying(): String {
-            val out = JSONObject()
-            val msm = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-            val sessions = try {
-                msm.getActiveSessions(ComponentName(this@MainActivity, MediaListener::class.java))
-            } catch (e: SecurityException) {
-                return out.put("permission", false).put("active", false).toString()
-            }
-            out.put("permission", true)
-            val c = sessions.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: sessions.firstOrNull()
-            val meta = c?.metadata
-            if (c == null || meta == null) return out.put("active", false).toString()
-            val title = meta.getString(MediaMetadata.METADATA_KEY_TITLE)
-            val st = c.playbackState
-            var pos = st?.position ?: 0L
-            if (st != null && st.state == PlaybackState.STATE_PLAYING && st.lastPositionUpdateTime > 0) {
-                pos += ((SystemClock.elapsedRealtime() - st.lastPositionUpdateTime) * st.playbackSpeed).toLong()
-            }
-            val appLabel = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(c.packageName, 0)).toString() } catch (e: Exception) { c.packageName }
-            val artKey = "${c.packageName}|$title"
-            if (artCache?.first != artKey) {
-                val bmp = meta.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: meta.getBitmap(MediaMetadata.METADATA_KEY_ART)
-                artCache = artKey to bmp?.let { toDataUrl(BitmapDrawable(resources, it), 300, 300) }
-            }
-            return out.put("active", true)
-                .put("playing", st?.state == PlaybackState.STATE_PLAYING)
-                .put("title", title ?: "")
-                .put("artist", meta.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: meta.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST) ?: "")
-                .put("album", meta.getString(MediaMetadata.METADATA_KEY_ALBUM) ?: "")
-                .put("durationMs", meta.getLong(MediaMetadata.METADATA_KEY_DURATION))
-                .put("positionMs", pos)
-                .put("app", appLabel)
-                .put("art", artCache?.second ?: JSONObject.NULL)
-                .toString()
-        }
+        fun nowPlaying(): String = NowPlayingReader.read(this@MainActivity)
 
         @JavascriptInterface
         fun openNotificationAccess(): Boolean = try {
             runOnUiThread { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             true
+        } catch (e: Exception) { false }
+
+        /** True when NOIR is the selected system screensaver. */
+        @JavascriptInterface
+        fun isScreensaver(): Boolean {
+            val flat = Settings.Secure.getString(contentResolver, "screensaver_components") ?: return false
+            return flat.split(',').any { ComponentName.unflattenFromString(it)?.className == NoirDream::class.java.name }
+        }
+
+        @JavascriptInterface
+        fun openScreensaverSettings(): Boolean = try {
+            runOnUiThread { startActivity(Intent(Settings.ACTION_DREAM_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }; true
         } catch (e: Exception) { false }
 
         @JavascriptInterface
@@ -313,17 +290,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun toDataUrl(d: Drawable, maxW: Int, maxH: Int): String {
-        val w = d.intrinsicWidth.takeIf { it > 0 } ?: maxW
-        val h = d.intrinsicHeight.takeIf { it > 0 } ?: maxH
-        val scale = minOf(1f, maxW.toFloat() / w, maxH.toFloat() / h)
-        val bmp = Bitmap.createBitmap((w * scale).toInt().coerceAtLeast(1), (h * scale).toInt().coerceAtLeast(1), Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bmp)
-        d.setBounds(0, 0, canvas.width, canvas.height)
-        d.draw(canvas)
-        val bytes = ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
-        return "data:image/png;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
-    }
+    private fun toDataUrl(d: Drawable, maxW: Int, maxH: Int): String = Images.toDataUrl(d, maxW, maxH)
 
     private fun launchIntent(pkg: String): Intent? =
         packageManager.getLeanbackLaunchIntentForPackage(pkg) ?: packageManager.getLaunchIntentForPackage(pkg)

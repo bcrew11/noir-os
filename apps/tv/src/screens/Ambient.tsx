@@ -70,6 +70,7 @@ export default function Ambient() {
       onClick={() => useUI.getState().go('home')}>
       {a.theme === 'midnight' && <Background variant="dunes" dim={0.25} />}
       {a.theme === 'aurora' && <Background variant="aurora" />}
+      {a.theme === 'nebula' && <Background variant="nebula" dim={0.1} />}
       {a.theme === 'obsidian' && <Background variant="obsidian" dim={0.35} />}
       {a.theme === 'photo' && <PhotoSlideshow photos={photos} interval={a.photoIntervalSec} />}
 

@@ -352,6 +352,23 @@ function MusicSection({ s }: { s: NoirState }) {
   );
 }
 
+/** NOIR as the system screensaver (replaces Google's ambient mode when selected). */
+function ScreensaverRow() {
+  const bridge = androidBridge() as (ReturnType<typeof androidBridge> & { isScreensaver?: () => boolean; openScreensaverSettings?: () => boolean }) | undefined;
+  const [on, setOn] = useState(() => !!bridge?.isScreensaver?.());
+  useEffect(() => {
+    const onVisible = () => document.visibilityState === 'visible' && setOn(!!bridge?.isScreensaver?.());
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [bridge]);
+  return (
+    <FRow id="am-saver" icon={MountainSnow} title={on ? 'NOIR is your screensaver' : 'Use NOIR as the screensaver'}
+      hint={on ? 'Replaces Google’s ambient mode, using the theme above.' : 'Replaces Google’s screensaver everywhere, not just inside NOIR. From your Mac: adb shell settings put secure screensaver_components app.noir.launcher/.NoirDream'}
+      value={on ? '' : 'Set up'}
+      onSelect={() => { if (!on && !bridge?.openScreensaverSettings?.()) pushToast({ tone: 'info', title: 'Use the adb command shown here' }); }} />
+  );
+}
+
 function AmbientSection({ s }: { s: NoirState }) {
   const a = s.settings.ambient;
   const set = (p: Partial<typeof a>) => void patchSettings({ ambient: p });
@@ -364,7 +381,7 @@ function AmbientSection({ s }: { s: NoirState }) {
             title: 'Ambient theme', layout: 'grid', value: a.theme,
             choices: (Object.keys(AMBIENT_THEMES) as Array<keyof typeof AMBIENT_THEMES>).map((id) => ({
               value: id, label: AMBIENT_THEMES[id],
-              preview: id === 'midnight' ? <Background variant="dunes" dim={0.25} /> : id === 'aurora' ? <Background variant="aurora" /> : id === 'obsidian' ? <Background variant="obsidian" dim={0.35} />
+              preview: id === 'midnight' ? <Background variant="dunes" dim={0.25} /> : id === 'aurora' ? <Background variant="aurora" /> : id === 'nebula' ? <Background variant="nebula" dim={0.1} /> : id === 'obsidian' ? <Background variant="obsidian" dim={0.35} />
                 : id === 'minimal' ? <div className="absolute inset-0 grid place-items-center bg-black text-[2.4rem] font-extralight text-fg/90">9:41</div>
                 : <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-[#3b2a20] via-[#1b1d2a] to-[#0b0912] text-[1rem] text-fg/70">Your photos</div>,
             })),
@@ -388,6 +405,7 @@ function AmbientSection({ s }: { s: NoirState }) {
           onSelect={() => pickList('Start after inactivity', String(a.idleMinutes), idle.map((n) => ({ value: String(n), label: n ? (n >= 60 ? '1 hour' : `${n} minutes`) : 'Never' })),
             (v) => set({ idleMinutes: Number(v) }))} />
         <FRow id="am-now" icon={Sparkles} title="Start ambient now" onSelect={() => useUI.getState().go('ambient')} />
+        {isStandalone() && <ScreensaverRow />}
       </Group>
     </>
   );

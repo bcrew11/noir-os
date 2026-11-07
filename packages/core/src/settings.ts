@@ -22,6 +22,7 @@ export const AMBIENT_THEMES = {
   midnight: 'Midnight Purple',
   obsidian: 'Obsidian',
   aurora: 'Soft Aurora',
+  nebula: 'Nebula',
   minimal: 'Minimal Clock',
   photo: 'Personal Photography',
 } as const;
