@@ -42,9 +42,69 @@ const activeScope = () => {
 
 const lowPerf = () => document.documentElement.classList.contains('low-perf');
 
+/**
+ * Where each smooth-scrolling container is heading. While a scroll animation runs, elements are
+ * temporarily somewhere else on screen (e.g. the last App Library row passes under the floating
+ * nav bar). Spatial navigation uses the *destination* layout, so quick presses or a held D-pad
+ * button behave exactly like slow ones.
+ */
+const scrollTargets = new Map<HTMLElement, { top: number; left: number }>();
+
+function scrollParent(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const cs = getComputedStyle(p);
+    if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX) && (p.scrollHeight > p.clientHeight || p.scrollWidth > p.clientWidth)) return p;
+  }
+  return null;
+}
+
+/** Element rect as it will be once any pending scroll in its container has finished. */
+function settledRect(el: HTMLElement): DOMRect {
+  const r = el.getBoundingClientRect();
+  const parent = scrollParent(el);
+  const t = parent && scrollTargets.get(parent);
+  if (!parent || !t) return r;
+  const dx = parent.scrollLeft - t.left;
+  const dy = parent.scrollTop - t.top;
+  return new DOMRect(r.left + dx, r.top + dy, r.width, r.height);
+}
+
 function scrollIntoView(el: HTMLElement, align: 'nearest' | 'start' = 'nearest') {
   const reduced = document.documentElement.dataset.motion !== 'full' || lowPerf();
-  el.scrollIntoView({ block: align, inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+  const parent = scrollParent(el);
+  if (!parent) {
+    el.scrollIntoView({ block: align, inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+    return;
+  }
+  // Compute the destination ourselves (honouring scroll-padding) so navigation can use it.
+  const cs = getComputedStyle(parent);
+  const padT = parseFloat(cs.scrollPaddingTop) || 0, padB = parseFloat(cs.scrollPaddingBottom) || 0;
+  const padL = parseFloat(cs.scrollPaddingLeft) || 0, padR = parseFloat(cs.scrollPaddingRight) || 0;
+  const pr = parent.getBoundingClientRect();
+  const r = settledRect(el);
+  const base = scrollTargets.get(parent) ?? { top: parent.scrollTop, left: parent.scrollLeft };
+  // Element position in the container's scroll coordinates, at the destination scroll offset.
+  const top = r.top - pr.top + base.top, bottom = top + r.height;
+  const left = r.left - pr.left + base.left, right = left + r.width;
+  let y = base.top, x = base.left;
+  if (align === 'start') y = top - padT;
+  else if (top - padT < y) y = top - padT;
+  else if (bottom + padB > y + parent.clientHeight) y = bottom + padB - parent.clientHeight;
+  if (left - padL < x) x = left - padL;
+  else if (right + padR > x + parent.clientWidth) x = right + padR - parent.clientWidth;
+  y = Math.max(0, Math.min(y, parent.scrollHeight - parent.clientHeight));
+  x = Math.max(0, Math.min(x, parent.scrollWidth - parent.clientWidth));
+  if (y === parent.scrollTop && x === parent.scrollLeft && !scrollTargets.has(parent)) return;
+  if (reduced) {
+    scrollTargets.delete(parent);
+    parent.scrollTo({ top: y, left: x, behavior: 'auto' });
+    return;
+  }
+  scrollTargets.set(parent, { top: y, left: x });
+  parent.scrollTo({ top: y, left: x, behavior: 'smooth' });
+  const done = () => { if (scrollTargets.get(parent)?.top === y && scrollTargets.get(parent)?.left === x) scrollTargets.delete(parent); };
+  parent.addEventListener('scrollend', done, { once: true });
+  setTimeout(done, 900); // fallback where scrollend isn't supported
 }
 
 export function focus(id: string | null | undefined, opts: { scroll?: boolean } = {}) {
@@ -69,7 +129,7 @@ function navigable(scope = activeScope()) {
 }
 
 export function firstIn(scope = activeScope()): string | undefined {
-  const list = navigable(scope).map((n) => ({ n, r: n.el.getBoundingClientRect() }));
+  const list = navigable(scope).map((n) => ({ n, r: settledRect(n.el) }));
   list.sort((a, b) => a.r.top - b.r.top || a.r.left - b.r.left);
   return list[0]?.n.id;
 }
@@ -80,7 +140,7 @@ export function move(dir: Direction): boolean {
   const cur = focusedId ? nodes.get(focusedId) : undefined;
   if (!cur || cur.scope !== scope || !cur.el.isConnected) return focus(scopeMemory.get(scope) ?? firstIn(scope));
   const candidates = navigable(scope).filter((n) => n.id !== cur.id);
-  const bestId = pickBest(cur.el.getBoundingClientRect(), candidates.map((n) => ({ id: n.id, rect: n.el.getBoundingClientRect() })), dir);
+  const bestId = pickBest(settledRect(cur.el), candidates.map((n) => ({ id: n.id, rect: settledRect(n.el) })), dir);
   if (!bestId) return false;
   const best = nodes.get(bestId)!;
   if (best.group && best.group !== cur.group) {
