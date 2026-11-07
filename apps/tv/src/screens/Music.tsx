@@ -7,6 +7,8 @@ import { Artwork } from '../components/widgets.tsx';
 import { useFocusable } from '../focus/focus.ts';
 import { useMotion } from '../hooks/useMotion.ts';
 import { useScreenFocus } from '../hooks/useScreenFocus.ts';
+import { AppCard } from '../components/AppCard.tsx';
+import { allApps, launchApp, launchReadiness } from '../lib/apps.ts';
 import { useUI } from '../store/ui.ts';
 
 function DeviceChip({ device }: { device: PlaybackDevice }) {
@@ -21,6 +23,15 @@ function DeviceChip({ device }: { device: PlaybackDevice }) {
 
 export default function Music() {
   const music = useNoir((s) => s.state?.music);
+  const state = useNoir((s) => s.state);
+  // Music apps you can open from here: installed music apps first, then Spotify (to get it) if missing.
+  const musicApps = (() => {
+    const all = allApps(state);
+    const isMusic = (a: (typeof all)[number]) => a.category === 'music' || /music|spotify|pandora|sirius|tidal|deezer|soundcloud|iheart|tunein|audible|podcast/i.test(a.name);
+    const ready = all.filter((a) => isMusic(a) && ['installed', 'ready', 'verified', 'demo'].includes(launchReadiness(state, a.id)));
+    const spotify = all.find((a) => a.id === 'spotify');
+    return spotify && !ready.some((a) => a.id === 'spotify') ? [...ready, spotify] : ready;
+  })();
   const settings = useNoir((s) => s.state?.settings);
   const go = useUI((s) => s.go);
   const progress = useMusicProgress(music);
@@ -75,6 +86,20 @@ export default function Music() {
           <div className="mt-10">
             <div className="mb-3 text-[1rem] font-medium uppercase tracking-[0.16em] text-fg-muted">Playing on</div>
             <div className="flex flex-wrap gap-3">{music.devices.map((d) => <DeviceChip key={d.id} device={d} />)}</div>
+          </div>
+        )}
+
+        {musicApps.length > 0 && (
+          <div className="mt-10">
+            <div className="mb-3 text-[1rem] font-medium uppercase tracking-[0.16em] text-fg-muted">Music apps</div>
+            <div className="scroll-hidden -mx-6 -my-6 flex gap-5 overflow-x-auto px-6 py-6" style={{ scrollPaddingInline: '1.5rem' }}>
+              {musicApps.map((app) => (
+                <div key={app.id} className="w-56 shrink-0">
+                  <AppCard app={app} size="grid" focusId={`music-app-${app.id}`} group="music-apps" onSelect={() => void launchApp(app)}
+                    badge={launchReadiness(state, app.id) === 'not-installed' ? <Pill tone="neutral">Get</Pill> : undefined} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
