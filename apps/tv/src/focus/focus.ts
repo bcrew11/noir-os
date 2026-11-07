@@ -50,12 +50,21 @@ const lowPerf = () => document.documentElement.classList.contains('low-perf');
  */
 const scrollTargets = new Map<HTMLElement, { top: number; left: number }>();
 
+// Which ancestor of an element is a scroll container never changes for a mounted element, so the
+// (getComputedStyle-heavy) lookup is cached; only "is it actually scrollable right now" is re-checked.
+const scrollAncestors = new WeakMap<HTMLElement, HTMLElement[]>();
+
 function scrollParent(el: HTMLElement): HTMLElement | null {
-  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
-    const cs = getComputedStyle(p);
-    if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX) && (p.scrollHeight > p.clientHeight || p.scrollWidth > p.clientWidth)) return p;
+  let list = scrollAncestors.get(el);
+  if (!list) {
+    list = [];
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX)) list.push(p);
+    }
+    scrollAncestors.set(el, list);
   }
-  return null;
+  return list.find((p) => p.scrollHeight > p.clientHeight || p.scrollWidth > p.clientWidth) ?? null;
 }
 
 /** Element rect as it will be once any pending scroll in its container has finished. */

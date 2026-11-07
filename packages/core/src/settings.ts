@@ -50,6 +50,8 @@ export const SettingsSchema = z.object({
     safeArea: z.number().min(0).max(6).default(0),
     /** `auto` measures frame time and drops blur/ambient motion on slow hardware. */
     performance: z.enum(['auto', 'high', 'low']).default('auto'),
+    /** Small live frame-rate readout, for tuning smoothness on real hardware. */
+    showFps: z.boolean().default(false),
   }).default({}),
   home: z.object({
     favorites: z.array(z.string().min(1).max(64)).max(12).default([...DEFAULT_FAVORITES]),

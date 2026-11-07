@@ -414,6 +414,8 @@ function SystemSection({ s }: { s: NoirState }) {
       <Group title="About">
         <FRow id="sy-ver" icon={Cpu} title="NOIR version" value={(standalone && readUpdateStatus()?.currentVersion) || s.version} />
         <FRow id="sy-mode" title="Deployment" value={deploymentLabel} />
+        <FRow id="sy-fps" icon={Activity} title="Show frame rate" hint="A small readout in the corner for checking smoothness on this device." right={<Toggle on={s.settings.appearance.showFps} />}
+          onSelect={() => void patchSettings({ appearance: { showFps: !s.settings.appearance.showFps } })} />
         {!standalone && <FRow id="sy-diag" icon={Activity} title="Connection diagnostics" onSelect={() => void api<Record<string, unknown>>('/api/diagnostics').then(setDiag)} />}
         {!standalone && <FRow id="sy-refresh" icon={RefreshCw} title="Refresh TV state, logos and photos" onSelect={() => void api('/api/tv/refresh', { body: {} }).then(() => pushToast({ tone: 'success', title: 'Refreshed' }))} />}
       </Group>

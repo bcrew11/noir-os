@@ -6,6 +6,7 @@ import { Background } from './components/Background.tsx';
 import { Header, NavBar, NoirMark, Toasts } from './components/chrome.tsx';
 import { PhonePairingOverlay } from './components/PhonePairingOverlay.tsx';
 import { RemoteSimulator } from './components/RemoteSimulator.tsx';
+import { FpsMeter } from './components/FpsMeter.tsx';
 import { installInput, setInputExtras } from './focus/input.ts';
 import { screenTransition, useMotion } from './hooks/useMotion.ts';
 import { usePerformanceProbe } from './hooks/usePerformance.ts';
@@ -93,6 +94,7 @@ export function App() {
       </AnimatePresence>
       <PhonePairingOverlay />
       {sim && <RemoteSimulator />}
+      {state.settings.appearance.showFps && <FpsMeter />}
       {status !== 'online' && <ConnectionBanner status={status} />}
     </div>
   );

@@ -3,6 +3,8 @@
 import { chromium } from 'playwright';
 const url = process.argv[2] ?? 'http://localhost:8790/index.html';
 const slow = Number(process.argv[3] ?? 6);
+// Optional CSS injected after load, for A/B experiments (e.g. disable a feature).
+const extraCss = process.argv[4] ?? '';
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, args: ['--no-proxy-server'] });
 const page = await b.newPage({ viewport: { width: 1920, height: 1080 } });
 await page.addInitScript(() => {
@@ -12,7 +14,9 @@ await page.addInitScript(() => {
     updateStatus: () => '{"state":"current","currentVersion":"x","latestVersion":"x","notes":null,"progress":0,"error":null}' };
 });
 await page.goto(url);
-await page.waitForSelector('[data-app]'); await page.waitForTimeout(2500);
+await page.waitForSelector('[data-app]');
+if (extraCss) await page.addStyleTag({ content: extraCss });
+await page.waitForTimeout(2500);
 const cdp = await page.context().newCDPSession(page);
 await cdp.send('Emulation.setCPUThrottlingRate', { rate: slow });
 await page.evaluate(() => {
@@ -20,6 +24,7 @@ await page.evaluate(() => {
   const tick = (t) => { window.__frames.push(t - last); last = t; if (window.__run) requestAnimationFrame(tick); };
   window.__run = true; requestAnimationFrame(tick);
 });
+await b.startTracing(page, { categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline'] });
 const keys = ['ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowLeft', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'];
 const latency = [];
 for (const k of keys) {
@@ -30,6 +35,10 @@ for (const k of keys) {
   await page.waitForTimeout(350);
 }
 const frames = await page.evaluate(() => { window.__run = false; return window.__frames.slice(1); });
+// Main-thread rendering cost while navigating, from the trace (ms, at the throttled CPU speed).
+const trace = JSON.parse((await b.stopTracing()).toString());
+const sum = (names) => trace.traceEvents.filter((e) => names.includes(e.name) && e.dur).reduce((t, e) => t + e.dur / 1000, 0);
+const cost = { paint: sum(['Paint']), raster: sum(['RasterTask']), styleLayout: sum(['UpdateLayoutTree', 'Layout']), layers: sum(['UpdateLayer', 'UpdateLayerTree', 'Layerize', 'PrePaint']), script: sum(['FunctionCall', 'EvaluateScript']) };
 const sorted = [...frames].sort((a, b) => a - b);
 const pct = (p) => sorted[Math.floor(sorted.length * p)]?.toFixed(1);
 console.log(JSON.stringify({
@@ -37,5 +46,6 @@ console.log(JSON.stringify({
   medianFrameMs: pct(0.5), p95FrameMs: pct(0.95), worstFrameMs: sorted.at(-1)?.toFixed(1),
   jankyFrames: frames.filter((f) => f > 34).length,
   keyToPaintMs: { median: [...latency].sort((a, b) => a - b)[5], max: Math.max(...latency) },
+  threadMs: Object.fromEntries(Object.entries(cost).map(([k, v]) => [k, Math.round(v)])),
 }));
 await b.close();

@@ -62,6 +62,10 @@ class MainActivity : Activity() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
+            // Rasterize content slightly ahead of time so moving between rows doesn't wait on paint.
+            settings.offscreenPreRaster = true
+            // Keep NOIR's renderer at high priority while it's on screen.
+            if (android.os.Build.VERSION.SDK_INT >= 26) setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true)
             isFocusable = true
             isFocusableInTouchMode = true
             addJavascriptInterface(Bridge(), "NoirAndroid")

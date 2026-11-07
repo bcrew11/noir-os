@@ -52,12 +52,20 @@ html[data-motion='off'] *, html.low-perf .anim-a, html.low-perf .anim-b, html.lo
 html[data-motion='off'] .parallax, html[data-motion='reduced'] .parallax, html.low-perf .parallax { transform: none; transition: none; }
 html[data-motion='off'] * { transition: none !important; }
 
-/* Low-performance (streaming sticks): no blur filters, no grain blend, lighter focus glow. */
-html.low-perf [data-heavy-fx], html.low-perf .grain { display: none; }
-html.low-perf .focus-ring {
-  box-shadow: 0 0 0 0.15rem color-mix(in srgb, var(--noir-highlight) 90%, white), 0 0 0.9rem 0.1rem color-mix(in srgb, var(--noir-accent) 45%, transparent);
-}
+/* ---------------------- streaming-stick rendering strategy ----------------------
+   The expensive thing on weak GPUs/CPUs is *repainting*, not compositing. So:
+   - the whole background is one cached compositor layer (painted once, never again);
+   - colour/shadow changes snap instead of re-painting every frame of a 200ms transition,
+     while transform/opacity animations (lift, scale, fades) keep running on the GPU;
+   - large blur filters stay off: measured, they cost far more than they look
+     (scripts/perf-probe.mjs, 10x CPU slowdown: 7 janky frames without, 71 with). */
+.bg-root { will-change: transform; contain: strict; }
 html.low-perf .bg-layer { will-change: auto; }
+html.low-perf [data-heavy-fx], html.low-perf .grain { display: none; }
+html.low-perf * { transition-property: transform, opacity !important; }
+html.low-perf .focus-ring {
+  box-shadow: 0 0 0 0.15rem color-mix(in srgb, var(--noir-highlight) 90%, white), 0 0 1.1rem 0.15rem color-mix(in srgb, var(--noir-accent) 50%, transparent);
+}
 
 /* Film grain to keep gradients from banding on TV panels. */
 .grain {

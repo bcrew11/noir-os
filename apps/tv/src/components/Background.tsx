@@ -91,7 +91,7 @@ function Nebula() {
 
 export const Background = memo(function Background({ variant, dim = 0 }: { variant: BackgroundId; dim?: number }) {
   return (
-    <div className="absolute inset-0 overflow-hidden" aria-hidden style={{ background: 'radial-gradient(120% 90% at 85% 0%, #1d1230 0%, #0f0a19 45%, #0b0912 75%)' }}>
+    <div className="bg-root absolute inset-0 overflow-hidden" aria-hidden style={{ background: 'radial-gradient(120% 90% at 85% 0%, #1d1230 0%, #0f0a19 45%, #0b0912 75%)' }}>
       {/* key light, top right */}
       <div className="bg-layer anim-glow" style={{ background: 'radial-gradient(42% 40% at 82% 8%, color-mix(in srgb, var(--noir-highlight) 34%, transparent), transparent 70%)' }} />
       <div className="absolute inset-0 parallax">
