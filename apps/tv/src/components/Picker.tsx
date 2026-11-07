@@ -1,6 +1,6 @@
 import { AnimatePresence } from 'motion/react';
 import { Check, ChevronRight } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { create } from 'zustand';
 import { useFocusable } from '../focus/focus.ts';
 import { useMotion } from '../hooks/useMotion.ts';
@@ -26,6 +26,8 @@ interface PickerSpec {
   value: string;
   layout?: 'list' | 'grid';
   onPick: (value: string) => void;
+  /** Called when an option gains focus (e.g. play a sound sample). */
+  onPreview?: (value: string) => void;
 }
 
 const usePicker = create<{ spec: PickerSpec | null }>(() => ({ spec: null }));
@@ -35,8 +37,11 @@ export function openPicker(spec: PickerSpec) {
 }
 const close = () => usePicker.setState({ spec: null });
 
-function ListOption({ c, selected, onPick, autoFocus }: { c: Choice; selected: boolean; onPick: () => void; autoFocus: boolean }) {
+function ListOption({ c, selected, onPick, autoFocus, onPreview }: { c: Choice; selected: boolean; onPick: () => void; autoFocus: boolean; onPreview?: () => void }) {
   const { ref, focused, pointer } = useFocusable<HTMLDivElement>(`pick-${c.value}`, { onSelect: onPick, autoFocus });
+  const preview = useRef(onPreview);
+  preview.current = onPreview;
+  useEffect(() => { if (focused) preview.current?.(); }, [focused]);
   return (
     <div ref={ref} {...pointer} data-focused={focused || undefined} role="option" aria-selected={selected}
       className={cx('flex min-h-16 items-center gap-4 rounded-2xl px-5 py-3 transition-[background,box-shadow] duration-200',
@@ -87,7 +92,7 @@ export function PickerHost() {
             {spec.choices.map((c) => {
               const pick = () => { spec.onPick(c.value); close(); };
               const props = { key: c.value, c, selected: c.value === spec.value, onPick: pick, autoFocus: c.value === spec.value };
-              return spec.layout === 'grid' ? <GridOption {...props} /> : <ListOption {...props} />;
+              return spec.layout === 'grid' ? <GridOption {...props} /> : <ListOption {...props} onPreview={spec.onPreview ? () => spec.onPreview!(c.value) : undefined} />;
             })}
           </div>
         </Dialog>

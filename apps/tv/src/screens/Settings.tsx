@@ -1,7 +1,7 @@
 import { AnimatePresence } from 'motion/react';
 import {
   Activity, Clock, Cpu, Download, Grid2x2, Image, LifeBuoy, Link2, Monitor, MountainSnow, Music2, Palette, Power, RefreshCw, RotateCcw, Search, Smartphone,
-  Gamepad2, Lightbulb, Sparkles, Trash2, Tv, Wifi,
+  Gamepad2, Lightbulb, Sparkles, Trash2, Tv, Volume2, Wifi,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ACCENTS, AMBIENT_THEMES, BACKGROUNDS, findApp, type AccentId, type NoirState } from '@noir/core';
@@ -10,6 +10,7 @@ import { Dialog } from '../components/Dialog.tsx';
 import { Background } from '../components/Background.tsx';
 import { PickerHost, PickerValue, openPicker, type Choice } from '../components/Picker.tsx';
 import { SmartHomeSettings } from '../components/SmartHome.tsx';
+import { SOUND_HINTS, SOUND_STYLES, playSound, type SoundStyle } from '../lib/sound.ts';
 import { RemoteButtonsSettings } from '../components/RemoteButtons.tsx';
 import { Keyboard } from '../components/Keyboard.tsx';
 import { FButton, FRow, Pill, Toggle, cx } from '../components/primitives.tsx';
@@ -107,6 +108,23 @@ function Appearance({ s }: { s: NoirState }) {
             { value: 'high', label: 'High quality', hint: 'Glass blur, glows and moving background everywhere. Can stutter on sticks.' },
             { value: 'low', label: 'Low (fastest)', hint: 'No blur or glow effects; smoothest navigation.' },
           ], (v) => set({ performance: v as typeof a.performance }))} />
+      </Group>
+      <Group title="Sound">
+        <FRow id="ap-sound" icon={Volume2} title="Navigation sounds" value={<PickerValue>{SOUND_STYLES[s.settings.sound.style]}</PickerValue>}
+          onSelect={() => openPicker({
+            title: 'Navigation sounds', subtitle: 'Move through the list to hear each one.', layout: 'list', value: s.settings.sound.style,
+            choices: (Object.keys(SOUND_STYLES) as SoundStyle[]).map((st) => ({ value: st, label: SOUND_STYLES[st], hint: SOUND_HINTS[st] })),
+            onPreview: (v) => playSound('select', v as SoundStyle),
+            onPick: (v) => void patchSettings({ sound: { style: v as SoundStyle } }),
+          })} />
+        <FRow id="ap-volume" icon={Volume2} title="Sound volume" disabled={s.settings.sound.style === 'off'}
+          value={<PickerValue>{Math.round(s.settings.sound.volume * 100)}%</PickerValue>}
+          onSelect={() => openPicker({
+            title: 'Sound volume', layout: 'list', value: String(s.settings.sound.volume),
+            choices: [0.3, 0.45, 0.6, 0.8, 1].map((v) => ({ value: String(v), label: `${Math.round(v * 100)}%` })),
+            onPreview: (v) => playSound('select', s.settings.sound.style, Number(v)),
+            onPick: (v) => void patchSettings({ sound: { volume: Number(v) } }),
+          })} />
       </Group>
       <Group title="Display">
         <FRow id="ap-clock" icon={Clock} title="24-hour clock" right={<Toggle on={a.clock24h} />} onSelect={() => set({ clock24h: !a.clock24h })} />

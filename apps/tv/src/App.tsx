@@ -7,6 +7,7 @@ import { Header, NavBar, NoirMark, Toasts } from './components/chrome.tsx';
 import { PhonePairingOverlay } from './components/PhonePairingOverlay.tsx';
 import { RemoteSimulator } from './components/RemoteSimulator.tsx';
 import { FpsMeter } from './components/FpsMeter.tsx';
+import { configureSound } from './lib/sound.ts';
 import { installInput, setInputExtras } from './focus/input.ts';
 import { screenTransition, useMotion } from './hooks/useMotion.ts';
 import { usePerformanceProbe } from './hooks/usePerformance.ts';
@@ -44,6 +45,9 @@ export function App() {
     });
     return () => { off(); offLaunch(); window.removeEventListener('keydown', onKey); };
   }, []);
+
+  const snd = state?.settings.sound;
+  useEffect(() => { if (snd) configureSound(snd.style, snd.volume); }, [snd]);
 
   const a = state?.settings.appearance;
   useEffect(() => {

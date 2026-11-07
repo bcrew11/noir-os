@@ -114,7 +114,10 @@ class NoirKeyService : AccessibilityService() {
                 if (s2 !in 200..299) return@request toast("$name: Govee refused the command")
                 main.postDelayed({
                     Govee.request(this, "POST", "/router/api/v1/device/state", stateBody()) { _, t3 ->
-                        toast(if (power(t3) == want) "$name ${if (want == 1) "on" else "off"}" else "$name: sent, not confirmed yet")
+                        val confirmed = power(t3) == want
+                        toast(if (confirmed) "$name ${if (want == 1) "on" else "off"}" else "$name: sent, not confirmed yet")
+                        // Keep NOIR's Home light button in sync (null = state unknown).
+                        NoirBus.emit("noir-light", JSONObject().put("device", device).put("on", if (confirmed) want == 1 else JSONObject.NULL))
                     }
                 }, 900)
             }

@@ -74,6 +74,11 @@ export const SettingsSchema = z.object({
     clockStyle: z.enum(['light', 'bold', 'serif']).default('light'),
     photoIntervalSec: z.number().int().min(10).max(3600).default(60),
   }).default({}),
+  sound: z.object({
+    /** Navigation sound style (see apps/tv/src/lib/sound.ts). */
+    style: z.enum(['off', 'tick', 'glass', 'wood', 'bubble', 'felt']).default('tick'),
+    volume: z.number().min(0.1).max(1).default(0.6),
+  }).default({}),
   music: z.object({
     provider: z.enum(['demo', 'spotify']).default('demo'),
     showArtwork: z.boolean().default(true),

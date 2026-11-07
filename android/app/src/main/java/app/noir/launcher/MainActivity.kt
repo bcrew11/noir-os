@@ -79,6 +79,7 @@ class MainActivity : Activity() {
             }
         }
         setContentView(web)
+        NoirBus.attach(this)
         Updater.check()
         acceptGoveeKey(intent)
         @Suppress("DEPRECATION")
@@ -107,6 +108,13 @@ class MainActivity : Activity() {
             .setNegativeButton("Cancel", null)
             .show()
     }
+
+    override fun onDestroy() {
+        NoirBus.detach(this)
+        super.onDestroy()
+    }
+
+    fun runJs(js: String) = runOnUiThread { if (::web.isInitialized) web.evaluateJavascript(js, null) }
 
     override fun onResume() {
         super.onResume()

@@ -17,14 +17,17 @@ function LightButton({ light, on, busy, onToggle }: { light: Light; on: boolean 
   const { ref, focused, pointer } = useFocusable<HTMLButtonElement>(`light-${light.device}`, { group: 'widgets', onSelect: onToggle });
   const level = useMotion();
   const Icon = on === false ? LightbulbOff : Lightbulb;
+  // "On" uses NOIR's accent: a soft purple tint, a lit accent bulb and a small glowing dot.
   return (
     <button ref={ref} {...pointer} data-focused={focused || undefined} tabIndex={-1} aria-label={`${light.name}: ${on ? 'on' : on === false ? 'off' : 'unknown'}`}
-      style={focusLift(focused, level, 1.05, 0)}
-      className={cx('flex h-[6.2rem] min-w-[11rem] flex-col items-start justify-center gap-1 rounded-2xl px-5 text-left transition-[background,box-shadow] duration-200',
-        focused ? 'bg-white/14 focus-ring' : on ? 'bg-amber-300/15' : 'bg-white/[0.05]')}>
+      style={{ ...focusLift(focused, level, 1.05, 0), ...(on ? { background: 'linear-gradient(160deg, color-mix(in srgb, var(--noir-primary) 34%, transparent), color-mix(in srgb, var(--noir-primary) 14%, transparent))' } : {}) }}
+      className={cx('relative flex h-[6.2rem] min-w-[11rem] flex-col items-start justify-center gap-1 rounded-2xl border px-5 text-left transition-[background,box-shadow] duration-200',
+        on ? 'border-highlight/35' : 'border-transparent',
+        focused ? 'focus-ring' : '', !on && (focused ? 'bg-white/14' : 'bg-white/[0.05]'))}>
+      {on && <span aria-hidden className="absolute right-3.5 top-3.5 size-2 rounded-full bg-highlight shadow-[0_0_0.6rem_0.1rem_var(--noir-highlight)]" />}
       <span className="flex items-center gap-2.5">
-        {busy ? <Loader2 className="size-6 animate-spin text-fg-muted" /> : <Icon className={cx('size-6', on ? 'text-amber-200' : 'text-fg-muted')} strokeWidth={1.8} />}
-        <span className={cx('text-[1.05rem] font-medium', on ? 'text-amber-100' : 'text-fg-muted')}>{on === null ? '—' : on ? 'On' : 'Off'}</span>
+        {busy ? <Loader2 className="size-6 animate-spin text-fg-muted" /> : <Icon className={cx('size-6', on ? 'text-highlight' : 'text-fg-muted')} strokeWidth={1.8} />}
+        <span className={cx('text-[1.05rem] font-medium', on ? 'text-fg' : 'text-fg-muted')}>{on === null ? '—' : on ? 'On' : 'Off'}</span>
       </span>
       <span className="max-w-[12rem] truncate text-[1.2rem] font-medium text-fg">{light.name}</span>
     </button>
@@ -47,8 +50,16 @@ export function SmartHomeWidget() {
   useEffect(() => {
     refresh();
     const onVisible = () => document.visibilityState === 'visible' && refresh();
+    // Toggled by a remote button (native service) → update immediately.
+    const onLight = (e: Event) => {
+      const { device, on } = (e as CustomEvent<{ device: string; on: boolean | null }>).detail;
+      setState((s) => ({ ...s, [device]: on }));
+    };
+    // Also catch changes made elsewhere (Govee app, wall switch) while Home is on screen.
+    const timer = setInterval(() => document.visibilityState === 'visible' && refresh(), 60_000);
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    window.addEventListener('noir-light', onLight);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('noir-light', onLight); };
   }, [refresh]);
 
   if (!lights.length || !goveeAvailable()) return null;

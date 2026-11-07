@@ -1,6 +1,7 @@
 import type { NavKey } from '@noir/core';
 import { onRemoteNav } from '@noir/ui';
 import { focus, hasLongSelect, move, select } from './focus.ts';
+import { playSound } from '../lib/sound.ts';
 import { handleBack, markActivity, useUI } from '../store/ui.ts';
 
 /**
@@ -48,12 +49,13 @@ export function dispatchNav(key: NavKey, opts: { long?: boolean } = {}) {
   for (let i = interceptors.length - 1; i >= 0; i--) if (interceptors[i]!(key)) return;
   switch (key) {
     case 'up': case 'down': case 'left': case 'right':
-      move(key);
+      if (move(key)) playSound('move'); // silent at edges
       return;
     case 'ok':
-      select(!!opts.long);
+      if (select(!!opts.long)) playSound('select');
       return;
     case 'back':
+      playSound('back');
       if (!handleBack()) {
         const ui = useUI.getState();
         if (ui.screen !== 'home') ui.go('home');
