@@ -33,7 +33,14 @@ export default function Home() {
       )}
 
       <section className={settings?.home.showGreeting === false ? 'mt-28' : 'mt-[8.5rem]'}>
-        <div className="scroll-hidden -mx-8 -my-10 flex items-center gap-5 overflow-x-auto px-8 py-10">
+        <div className="scroll-hidden -mx-8 -my-10 flex items-center gap-5 overflow-x-auto px-8 py-10"
+          style={{
+            // Keep the focused tile (and its glow) fully on screen when the row scrolls, and fade
+            // tiles that are only partly visible instead of slicing them at the edge.
+            scrollPaddingInline: '2.5rem',
+            maskImage: 'linear-gradient(90deg, transparent 0, #000 2rem, #000 calc(100% - 2rem), transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(90deg, transparent 0, #000 2rem, #000 calc(100% - 2rem), transparent 100%)',
+          }}>
           {favorites.map((app) => {
             const r = launchReadiness(state, app.id);
             return (

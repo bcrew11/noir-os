@@ -33,6 +33,7 @@ export function AppCard({ app, focusId, group, onSelect, onLongSelect, size = 'h
       aria-label={app.name}
       data-focused={focused || undefined}
       data-app={app.id}
+      // Hero tiles keep a fixed size; when there are more apps than fit, the row scrolls.
       className={cx('relative shrink-0 cursor-pointer', size === 'hero' ? 'h-40 w-72' : 'h-36 w-full')}
       style={{ ...focusLift(focused, level), zIndex: focused ? 2 : 1 }}
     >
