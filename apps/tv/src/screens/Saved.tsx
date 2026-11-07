@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'motion/react';
-import { Bookmark, Play, Trash2 } from 'lucide-react';
+import { Bookmark, FlaskConical, Play, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { findApp, type SavedItem } from '@noir/core';
 import { BrandMark, pushToast, useNoir } from '@noir/ui';
@@ -8,7 +8,7 @@ import { FRow, SectionTitle, cx, focusLift } from '../components/primitives.tsx'
 import { useFocusable } from '../focus/focus.ts';
 import { useMotion } from '../hooks/useMotion.ts';
 import { useScreenFocus } from '../hooks/useScreenFocus.ts';
-import { openSaved, removeSaved } from '../lib/saved.ts';
+import { describeStep, openSaved, openSavedWith, removeSaved, savedSteps } from '../lib/saved.ts';
 
 function ago(t: number): string {
   const m = Math.round((Date.now() - t) / 60000);
@@ -39,7 +39,9 @@ function SavedCard({ item, onOptions }: { item: SavedItem; onOptions: () => void
       <div className="relative grid aspect-video place-items-center overflow-hidden" style={{ background: app?.brand.background ?? 'linear-gradient(160deg,#241d33,#14101d)' }}>
         {image
           ? <img src={image} alt="" draggable={false} onError={() => setBroken(true)} className="absolute inset-0 size-full object-cover" />
-          : app ? <BrandMark app={app} logoUrl={logos?.[app.id]} /> : <Bookmark className="size-12 text-fg/70" strokeWidth={1.5} />}
+          // No thumbnail (e.g. Prime Video doesn't share one): the app's own TV banner fills the card.
+          : app && logos?.[app.id] ? <img src={logos[app.id]} alt="" draggable={false} className="absolute inset-0 size-full object-cover" />
+          : app ? <BrandMark app={app} /> : <Bookmark className="size-12 text-fg/70" strokeWidth={1.5} />}
         {image && app && (
           <span className="absolute bottom-3 left-3 rounded-full bg-black/65 px-3 py-1 text-[0.95rem] font-medium text-white">{app.name}</span>
         )}
@@ -83,6 +85,11 @@ export default function Saved() {
             <div className="flex flex-col gap-2.5">
               <FRow id="sv-open" icon={Play} title="Watch now" autoFocus onSelect={() => { const it = options; setOptions(null); open(it); }} />
               <FRow id="sv-remove" icon={Trash2} title="Remove from Saved" onSelect={() => { removeSaved(options.id); setOptions(null); pushToast({ tone: 'info', title: 'Removed from Saved' }); }} />
+              {/* If an app opens to its home screen instead of the title, one of these may work better. */}
+              {savedSteps(options).map((st, i) => (
+                <FRow key={i} id={`sv-way-${i}`} icon={FlaskConical} title={`Try another way · ${i + 1}`} hint={describeStep(st)}
+                  onSelect={() => { const r = openSavedWith(options, st); setOptions(null); pushToast({ tone: r.status === 'failed' ? 'error' : 'info', title: r.message }); }} />
+              ))}
             </div>
           </Dialog>
         )}

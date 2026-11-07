@@ -36,7 +36,7 @@ await tv.addInitScript((port) => {
     phoneUrl: () => `http://127.0.0.1:${port}/phone/`,
     fetchMeta: (cb) => setTimeout(() => window.__noirNative(cb, JSON.stringify({ title: 'Test Video Title', image: 'https://i.ytimg.com/vi/abc123def45/hqdefault.jpg' }), null), 50),
     openUrl: (url, pkg) => { window.__launched.push(`url:${pkg}:${url}`); return '{"ok":true,"message":"Opened"}'; },
-    openIntents: (json) => { const st = JSON.parse(json)[0]; window.__launched.push(`url:${st.pkg}:${st.data}`); return '{"ok":true,"message":"Opened"}'; },
+    openIntents: (json) => { const st = JSON.parse(json)[0]; window.__launched.push(`url:${st.pkg ?? st.component?.split('/')[0]}:${st.data}`); return '{"ok":true,"message":"Opened"}'; },
     phoneRespond: (id, status, body) => window.__respond(id, status, body),
     phoneSend: (cid, text) => window.__send(cid, text),
     phoneClose: (cid) => window.__close(cid),

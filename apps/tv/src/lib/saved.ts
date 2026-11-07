@@ -78,14 +78,40 @@ export function openSteps(url: string, appId: string | null, pkg: string | null)
   if (appId === 'netflix' && pkg) {
     const id = netflixId(url);
     if (id) {
-      // Netflix's TV app opens a title's page from its own scheme; `source=30` marks a launcher deep link.
-      steps.push({ data: `netflix://title/${id}`, pkg, extras: { source: '30' }, flags: 0x10008000 }); // NEW_TASK | CLEAR_TASK: jump there even if Netflix is already open
+      // Netflix's TV app only acts on deep links handed straight to its main activity (letting Android
+      // pick an activity just opens the home screen). netflix://title/<id> is the title's page;
+      // `source=30` marks a launcher-style deep link. NEW_TASK | CLEAR_TASK (+ no-history) makes it
+      // jump there even if Netflix is already open.
+      const main = `${pkg}/.MainActivity`;
+      steps.push({ data: `netflix://title/${id}`, component: main, extras: { source: '30' }, flags: 0x10808000 });
+      steps.push({ data: `https://www.netflix.com/title/${id}`, component: main, extras: { source: '30' }, flags: 0x10808000 });
+      steps.push({ data: `netflix://title/${id}`, pkg, extras: { source: '30' }, flags: 0x10008000 });
       steps.push({ data: `https://www.netflix.com/title/${id}`, pkg, extras: { source: '30' } });
     }
   }
   if (pkg) steps.push({ data: url, pkg });
   steps.push({ data: url });
   return steps;
+}
+
+/** Short description of a step, for the "Try another way" list. */
+export function describeStep(s: IntentStep): string {
+  const how = s.component ? 'direct to the app' : s.pkg ? 'via the app' : 'any app';
+  return `${s.data.split(/[?#]/)[0]!.replace(/^https?:\/\/(www\.)?/, '')} · ${how}`;
+}
+
+/** The ways this item can be opened (for diagnostics in the item's options). */
+export function savedSteps(item: SavedItem): IntentStep[] {
+  const app = item.appId ? findApp(item.appId, useNoir.getState().state?.customApps) : undefined;
+  return openSteps(item.url, item.appId, app ? androidPackageFor(app) : null);
+}
+
+/** Open with one specific method only. */
+export function openSavedWith(item: SavedItem, step: IntentStep): CommandResult {
+  const bridge = androidBridge();
+  if (!bridge?.openIntents) return { status: 'unsupported', message: 'Needs the latest NOIR launcher.' };
+  const r = JSON.parse(bridge.openIntents(JSON.stringify([step]))) as { ok: boolean; message: string };
+  return r.ok ? { status: 'sent', message: `Tried: ${describeStep(step)}` } : { status: 'failed', message: r.message };
 }
 
 /** Open in the service's own app when it's installed, else whatever app handles the link. */

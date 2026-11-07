@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
 import { Pause, Play, SkipBack, SkipForward, Speaker } from 'lucide-react';
 import { formatDuration, type PlaybackDevice } from '@noir/core';
 import { command, useMusicProgress, useNoir } from '@noir/ui';
@@ -21,9 +22,27 @@ function DeviceChip({ device }: { device: PlaybackDevice }) {
   );
 }
 
+/**
+ * "Playing", ignoring the brief not-playing blip media apps report between tracks, so effects tied
+ * to playback don't flicker off and on at every song change.
+ */
+function useSteadyPlaying(playing: boolean, holdMs = 6000) {
+  const [steady, setSteady] = useState(playing);
+  useEffect(() => {
+    if (playing) { setSteady(true); return; }
+    const id = setTimeout(() => setSteady(false), holdMs);
+    return () => clearTimeout(id);
+  }, [playing, holdMs]);
+  return steady;
+}
+
 export default function Music() {
   const music = useNoir((s) => s.state?.music);
   const state = useNoir((s) => s.state);
+  const glow = useSteadyPlaying(!!music?.isPlaying);
+  const lastArt = useRef<string | undefined>(undefined);
+  if (music?.track?.artUrl) lastArt.current = music.track.artUrl;
+  const washUrl = music?.track?.artUrl ?? (glow ? lastArt.current : undefined);
   // Music apps you can open from here: installed music apps first, then Spotify (to get it) if missing.
   const musicApps = (() => {
     const all = allApps(state);
@@ -44,15 +63,20 @@ export default function Music() {
 
   return (
     <div className="relative flex h-full items-center gap-20 pb-28">
-      {/* immersive color wash from the artwork */}
-      {track?.artUrl && (
-        <div aria-hidden data-heavy-fx className="pointer-events-none absolute -left-40 top-0 h-[44rem] w-[60rem] opacity-50" style={{ backgroundImage: `url("${track.artUrl}")`, backgroundSize: 'cover', filter: 'blur(90px) saturate(140%)' }} />
+      {/* immersive color wash from the artwork (kept through the gap between songs) */}
+      {washUrl && (
+        <div aria-hidden data-heavy-fx className="pointer-events-none absolute -left-40 top-0 h-[44rem] w-[60rem] opacity-50" style={{ backgroundImage: `url("${washUrl}")`, backgroundSize: 'cover', filter: 'blur(90px) saturate(140%)' }} />
       )}
-      <motion.div key={track?.id ?? 'none'} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: level === 'off' ? 0 : 0.4 }}
-        className="relative shrink-0">
-        <Artwork url={settings?.music.showArtwork === false ? undefined : track?.artUrl} className="size-[30rem] rounded-[2.25rem] shadow-[0_3rem_6rem_-2rem_rgba(0,0,0,0.9)]" iconClass="size-28" />
-        {music.isPlaying && <div aria-hidden className="absolute -inset-3 -z-10 rounded-[2.75rem] opacity-70 blur-2xl" style={{ background: 'var(--noir-accent)' }} />}
-      </motion.div>
+      <div className="relative shrink-0">
+        {/* The light behind the cover lives outside the per-song element, so a new song doesn't make
+            it pop back in; it fades instead of switching. */}
+        <div aria-hidden className="absolute -inset-3 rounded-[2.75rem] blur-2xl transition-opacity duration-[1200ms] ease-in-out"
+          style={{ background: 'var(--noir-accent)', opacity: glow ? 0.7 : 0 }} />
+        <motion.div key={track?.id ?? 'none'} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: level === 'off' ? 0 : 0.4 }}
+          className="relative">
+          <Artwork url={settings?.music.showArtwork === false ? undefined : track?.artUrl} className="size-[30rem] rounded-[2.25rem] shadow-[0_3rem_6rem_-2rem_rgba(0,0,0,0.9)]" iconClass="size-28" />
+        </motion.div>
+      </div>
 
       <div className="relative min-w-0 flex-1">
         <div className="flex items-center gap-3">
