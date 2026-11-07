@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Noir" parent="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+        <item name="android:windowBackground">@color/noir_ink</item>
+        <item name="android:colorBackground">@color/noir_ink</item>
+        <!-- Android 12+ system splash: NOIR's ink colour and mark, handing off to the web intro. -->
+        <item name="android:windowSplashScreenBackground">@color/noir_ink</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_mark</item>
+    </style>
+</resources>

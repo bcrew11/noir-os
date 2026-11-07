@@ -30,7 +30,7 @@ async function sweep(name) {
   await page.keyboard.press('Escape'); await page.waitForTimeout(500);
 }
 const go = async (label) => { await page.click(`nav >> text=${label}`); await page.mouse.move(5, 5); await page.waitForTimeout(700); };
-await page.goto('http://localhost:5173'); await page.waitForSelector('[data-app]'); await page.waitForTimeout(900);
+await page.goto('http://localhost:5173/?noboot=1'); await page.waitForSelector('[data-app]'); await page.waitForTimeout(900);
 // App options (hold OK)
 await page.keyboard.down('Enter'); await page.waitForTimeout(800); await page.keyboard.up('Enter'); await sweep('App options (Home)');
 // Apps: search + options from library

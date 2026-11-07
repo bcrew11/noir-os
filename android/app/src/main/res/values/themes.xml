@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark from the very first frame, so launch never flashes before NOIR's intro. -->
+    <style name="Theme.Noir" parent="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+        <item name="android:windowBackground">@color/noir_ink</item>
+        <item name="android:colorBackground">@color/noir_ink</item>
+    </style>
+    <color name="noir_ink">#0B0912</color>
+</resources>

@@ -1,7 +1,7 @@
 // Capture the dashboard at 1080p. Usage: node scripts/screenshots.mjs [baseUrl] [outDir] [scale]
 import { chromium } from 'playwright';
 
-const base = process.argv[2] ?? 'http://localhost:5173';
+const base = process.argv[2] ?? 'http://localhost:5173/?noboot=1';
 const out = process.argv[3] ?? 'screenshots';
 const scale = Number(process.argv[4] ?? 1);
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
@@ -12,7 +12,7 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 const key = async (k, wait = 450) => { await page.keyboard.press(k); await page.waitForTimeout(wait); };
 const shot = async (name) => page.screenshot({ path: `${out}/${name}.png` });
 
-await page.goto(base);
+await page.goto(base.includes('?') ? base : `${base}/?noboot=1`);
 await page.waitForSelector('[data-app]');
 await page.waitForTimeout(1800);
 await shot('01-home');

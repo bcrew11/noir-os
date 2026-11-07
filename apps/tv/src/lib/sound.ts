@@ -114,15 +114,13 @@ export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let current: { style: SoundStyle; volume: number } = { style: 'tick', volume: 0.6 };
+/**
+ * Pre-rendered clips per style. Playing a ready AudioBuffer is a single cheap node, so a key press
+ * never pays for building oscillators/filters (measured: ~25% of key-to-paint time at 10x slowdown).
+ */
+const clips = new Map<SoundStyle, Partial<Record<SoundKind, AudioBuffer>>>();
 
-export function configureSound(style: SoundStyle, volume: number) {
-  current = { style, volume };
-  if (master) master.gain.value = volume;
-}
-
-/** Play a navigation sound. `volume` overrides the setting for this one sound (previews). */
-export function playSound(kind: SoundKind, style: SoundStyle = current.style, volume?: number) {
-  if (style === 'off') return;
+function audio(): AudioContext | null {
   try {
     if (!ctx) {
       ctx = new AudioContext({ latencyHint: 'interactive' });
@@ -131,13 +129,52 @@ export function playSound(kind: SoundKind, style: SoundStyle = current.style, vo
       master.connect(ctx.destination);
     }
     if (ctx.state === 'suspended') void ctx.resume();
-    if (volume === undefined) renderSound(ctx, master!, style, kind);
-    else {
-      const g = ctx.createGain();
+    return ctx;
+  } catch { return null; }
+}
+
+async function prerender(style: SoundStyle) {
+  if (style === 'off' || clips.has(style)) return;
+  const live = audio();
+  if (!live) return;
+  const set: Partial<Record<SoundKind, AudioBuffer>> = {};
+  clips.set(style, set);
+  for (const kind of ['move', 'select', 'back'] as const) {
+    const off = new OfflineAudioContext(1, Math.ceil(live.sampleRate * 0.35), live.sampleRate);
+    renderSound(off, off.destination, style, kind, 0.005);
+    set[kind] = await off.startRendering();
+  }
+}
+
+export function configureSound(style: SoundStyle, volume: number) {
+  current = { style, volume };
+  if (master) master.gain.value = volume;
+  void prerender(style);
+}
+
+/** Play a navigation sound. `volume` overrides the setting for this one sound (previews). */
+export function playSound(kind: SoundKind, style: SoundStyle = current.style, volume?: number) {
+  if (style === 'off') return;
+  const c = audio();
+  if (!c || !master) return;
+  try {
+    let out: AudioNode = master;
+    if (volume !== undefined) {
+      const g = c.createGain();
       g.gain.value = volume;
-      g.connect(ctx.destination);
-      renderSound(ctx, g, style, kind);
+      g.connect(c.destination);
       setTimeout(() => g.disconnect(), 1000);
+      out = g;
+    }
+    const clip = clips.get(style)?.[kind];
+    if (clip) {
+      const src = c.createBufferSource();
+      src.buffer = clip;
+      src.connect(out);
+      src.start();
+    } else {
+      renderSound(c, out, style, kind); // first press before pre-rendering finishes
+      void prerender(style);
     }
   } catch { /* audio unavailable — stay silent */ }
 }

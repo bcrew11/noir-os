@@ -1,19 +1,21 @@
 // Measures focus-navigation smoothness of the Android (standalone) build under CPU throttling.
 // Usage: node scripts/perf-probe.mjs [url] [cpuSlowdown]
 import { chromium } from 'playwright';
-const url = process.argv[2] ?? 'http://localhost:8790/index.html';
+const url = process.argv[2] ?? 'http://localhost:8790/index.html?noboot=1';
 const slow = Number(process.argv[3] ?? 6);
 // Optional CSS injected after load, for A/B experiments (e.g. disable a feature).
 const extraCss = process.argv[4] ?? '';
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, args: ['--no-proxy-server'] });
 const page = await b.newPage({ viewport: { width: 1920, height: 1080 } });
+// Optional settings for A/B runs, e.g. NOIR_SETTINGS='{"sound":{"style":"off"}}'
+await page.addInitScript((settings) => { if (settings) localStorage.setItem('noir.settings', settings); }, process.env.NOIR_SETTINGS ?? '');
 await page.addInitScript(() => {
   const apps = [['com.google.android.youtube.tvunplugged', 'YouTube TV'], ['com.google.android.youtube.tv', 'YouTube'], ['com.espn.score_center', 'ESPN'], ['com.netflix.ninja', 'Netflix'], ['com.disney.disneyplus', 'Disney+']];
   window.NoirAndroid = { platform: () => 'android-tv', findApp: () => null, launch: () => '{"ok":true}', installedApps: () => JSON.stringify(apps), appBanner: () => null,
     openStore: () => true, mediaKey: () => {}, nowPlaying: () => '{"permission":true,"active":false}', openNotificationAccess: () => true, openSystemSettings: () => {},
     updateStatus: () => '{"state":"current","currentVersion":"x","latestVersion":"x","notes":null,"progress":0,"error":null}' };
 });
-await page.goto(url);
+await page.goto(url.includes('?') ? url : `${url}?noboot=1`);
 await page.waitForSelector('[data-app]');
 if (extraCss) await page.addStyleTag({ content: extraCss });
 await page.waitForTimeout(2500);

@@ -80,3 +80,49 @@ html.low-perf .focus-ring {
     0 0 1.6rem 0.2rem color-mix(in srgb, var(--noir-accent) 55%, transparent),
     0 1.6rem 3rem -1rem rgba(0, 0, 0, 0.8);
 }
+
+/* ------------------------------- boot intro --------------------------------
+   All keyframes animate transform/opacity only (GPU-composited). */
+.boot {
+  position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; overflow: hidden;
+  background: var(--color-ink-900);
+  transition: opacity 450ms var(--ease-noir), transform 450ms var(--ease-noir);
+}
+.boot-leave { opacity: 0; transform: scale(1.04); pointer-events: none; }
+.boot-glow {
+  position: absolute; width: 120rem; height: 120rem; border-radius: 9999px;
+  background: radial-gradient(circle closest-side,
+    color-mix(in srgb, var(--noir-accent) 40%, transparent) 0%,
+    color-mix(in srgb, var(--noir-accent) 22%, transparent) 22%,
+    color-mix(in srgb, var(--noir-primary) 10%, transparent) 48%,
+    color-mix(in srgb, var(--noir-primary) 4%, transparent) 70%,
+    transparent 100%);
+  opacity: 0; transform: scale(0.55);
+  animation: boot-glow 1300ms var(--ease-noir) forwards;
+}
+.boot-mark-row { position: relative; display: flex; align-items: center; gap: 2.2rem; }
+.boot-mark {
+  width: 4.6rem; height: 6.2rem; transform-origin: 50% 100%;
+  opacity: 0; transform: scaleY(0.2);
+  animation: boot-mark 620ms 120ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+.boot-word { position: relative; padding: 0.4rem 0; margin-right: -0.45em; font-size: 5rem; font-weight: 500; letter-spacing: 0.45em; color: var(--color-fg); }
+.boot-word > span:not(.boot-shine) { display: inline-block; opacity: 0; transform: translate3d(0, 1.4rem, 0); animation: boot-letter 560ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards; }
+.boot-shine {
+  position: absolute; inset: 0.4rem 0 0.4rem 0; letter-spacing: inherit; white-space: nowrap;
+  color: var(--noir-highlight);
+  text-shadow: 0 0 1.2rem var(--noir-accent), 0 0 2.4rem color-mix(in srgb, var(--noir-accent) 60%, transparent);
+  opacity: 0; will-change: opacity;
+  animation: boot-shine 900ms 980ms ease-in-out forwards;
+}
+@keyframes boot-glow { to { opacity: 1; transform: scale(1); } }
+@keyframes boot-mark { to { opacity: 1; transform: scaleY(1); } }
+@keyframes boot-letter { to { opacity: 1; transform: translate3d(0, 0, 0); } }
+@keyframes boot-shine { 45% { opacity: 0.85; } 100% { opacity: 0; } }
+
+/* Reduced motion: a calm fade, no movement. */
+.boot-reduced .boot-glow { animation: none; opacity: 0.8; transform: none; }
+.boot-reduced .boot-mark { animation: boot-fade 400ms forwards; transform: none; }
+.boot-reduced .boot-word > span:not(.boot-shine) { animation: boot-fade 400ms forwards; transform: none; }
+.boot-reduced .boot-shine { display: none; }
+@keyframes boot-fade { to { opacity: 1; } }

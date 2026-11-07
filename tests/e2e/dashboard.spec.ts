@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { expect, test } from '@playwright/test';
 
-const TV = process.env.NOIR_E2E_TV ?? 'http://localhost:5173';
+const TV = process.env.NOIR_E2E_TV ?? 'http://localhost:5173/?noboot=1';
 // The phone must look like a *remote* device, so use the LAN address rather than localhost.
 const lanIp = Object.values(os.networkInterfaces()).flat().find((a) => a && a.family === 'IPv4' && !a.internal)?.address;
 const PHONE = process.env.NOIR_E2E_PHONE ?? `http://${lanIp}:5174/phone/`;

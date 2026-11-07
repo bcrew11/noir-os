@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { applyAccent, command, connect, onLaunchOnDisplay, useNoir } from '@noir/ui';
 import { allApps, launchApp } from './lib/apps.ts';
 import { Background } from './components/Background.tsx';
@@ -7,6 +7,7 @@ import { Header, NavBar, NoirMark, Toasts } from './components/chrome.tsx';
 import { PhonePairingOverlay } from './components/PhonePairingOverlay.tsx';
 import { RemoteSimulator } from './components/RemoteSimulator.tsx';
 import { FpsMeter } from './components/FpsMeter.tsx';
+import { BootIntro } from './components/BootIntro.tsx';
 import { configureSound } from './lib/sound.ts';
 import { installInput, setInputExtras } from './focus/input.ts';
 import { screenTransition, useMotion } from './hooks/useMotion.ts';
@@ -31,6 +32,9 @@ export function App() {
   const motionLevel = useMotion();
   const lowPerf = usePerformanceProbe(state?.settings.appearance.performance ?? 'auto');
   useIdle();
+  // Boot intro: once per launch (page load), never when animation is off.
+  const [booting, setBooting] = useState(() => !new URLSearchParams(location.search).has('noboot'));
+  const endBoot = useCallback(() => setBooting(false), []);
   const [nowPlaying, exitNowPlaying] = useNowPlayingIdle();
 
   useEffect(() => {
@@ -104,6 +108,7 @@ export function App() {
       <PhonePairingOverlay />
       {sim && <RemoteSimulator />}
       {state.settings.appearance.showFps && <FpsMeter />}
+      {booting && motionLevel !== 'off' && <BootIntro level={motionLevel} onDone={endBoot} />}
       {status !== 'online' && <ConnectionBanner status={status} />}
     </div>
   );
