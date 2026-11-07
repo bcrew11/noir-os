@@ -1,7 +1,8 @@
 {
-  "versionCode": 5,
-  "versionName": "0.3.2",
-  "sha256": "798d40ff12c81baed7a508c51ee929fdc82d9fcb025b0f37e19421dfa693d9c1",
-  "notes": "Faster on Google TV sticks; new update channel.",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.3.2.apk"
+  "versionCode": 6,
+  "versionName": "0.3.3",
+  "sha256": "5a42cc768a988ecc1b47543a5862b26b0b0b6515f1253916c67427fd8b7d0660",
+  "notes": "Much smoother navigation on streaming sticks.",
+  "publishedAt": "2026-11-07T00:00:10.599Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.3.3.apk"
 }
