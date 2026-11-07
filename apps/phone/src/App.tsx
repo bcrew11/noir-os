@@ -13,6 +13,8 @@ function Pair({ onPaired }: { onPaired: () => void }) {
   const [name, setName] = useState(() => (/iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android phone' : 'Phone'));
   const [req, setReq] = useState<{ requestId: string; displayedOnTv: boolean } | null>(null);
   const [code, setCode] = useState('');
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const installed = (navigator as Navigator & { standalone?: boolean }).standalone === true || matchMedia('(display-mode: standalone)').matches;
   const [busy, setBusy] = useState(false);
   const go = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -28,6 +30,11 @@ function Pair({ onPaired }: { onPaired: () => void }) {
         <div className="space-y-4">
           <h1 className="text-[1.8rem] font-semibold leading-tight">Pair this phone</h1>
           <p className="text-fg-muted">A code will appear on your TV. Enter it here to let this phone control NOIR.</p>
+          {ios && !installed && (
+            <p className="rounded-2xl bg-primary/15 p-3 text-[0.88rem] leading-relaxed text-fg">
+              Want NOIR as an app? Before pairing, tap <span className="font-medium">Share</span> → <span className="font-medium">Add to Home Screen</span>, then open NOIR from its icon and pair there. (Pairing in Safari doesn’t carry over to the Home Screen app.)
+            </p>
+          )}
           <Field label="Name for this phone" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
           <Btn variant="primary" className="w-full !py-4" disabled={busy || !name.trim()} onClick={() => go(async () => {
             setReq(await api('/api/phone/pair/request', { body: { name: name.trim() } }));

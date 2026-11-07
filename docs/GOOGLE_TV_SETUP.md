@@ -87,6 +87,19 @@ been confirmed.
 - Apps that aren't installed show **Get**; selecting one opens its Google Play page.
 - **Hold Back for 2 seconds** for an advanced option: pointing NOIR at a NOIR server. Leave it empty.
 
+## Phone remote (iPhone or Android)
+
+The stick hosts NOIR's phone remote itself — no computer or App Store needed. Your phone must be on the same Wi‑Fi.
+
+1. On the TV: **Settings → Devices → Connect your phone**. A QR code and an address like `http://192.168.4.130:8787/phone/` appear.
+2. Scan the code with the iPhone camera (or type the address in Safari).
+3. **Before pairing**, tap **Share → Add to Home Screen**. Open NOIR from the new icon. (A Home Screen app keeps its own storage, so pairing in Safari wouldn't carry over.)
+4. Tap **Show code on TV** and enter the 6-digit code shown on the TV.
+
+The phone controls NOIR (D-pad, Back, Home, play/pause, app shortcuts, lights, appearance and ambient settings). It works while NOIR is running on the TV. Inside Netflix, YouTube and other apps, use the remote in Google's **Google TV** app. Remove a phone from **Settings → Devices**.
+
+If the stick's address changes, scan the new QR code. Giving the stick a reserved address in your router's DHCP settings avoids this.
+
 ## Undo everything
 
 ```bash

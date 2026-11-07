@@ -1,9 +1,11 @@
 import { ArrowDown, ArrowUp, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
-import { ACCENTS, AMBIENT_THEMES, BACKGROUNDS, CATEGORY_LABELS, INPUT_ICONS, type AccentId, type AppCategory } from '@noir/core';
+import { ACCENTS, AMBIENT_THEMES, BACKGROUNDS, CATEGORY_LABELS, INPUT_ICONS, type AccentId, type AppCategory, type Settings } from '@noir/core';
 import { api, patchSettings, pushToast, useNoir } from '@noir/ui';
 import { allApps } from './apps.ts';
 import { Btn, Card, Field, Section, Segmented, Toggle, cx } from './ui.tsx';
+
+const SOUND_OPTIONS: Array<[Settings['sound']['style'], string]> = [['off', 'Off'], ['thock', 'Thock'], ['tactile', 'Tactile'], ['creamy', 'Creamy'], ['tick', 'Tick'], ['glass', 'Glass'], ['wood', 'Wood'], ['bubble', 'Bubble'], ['felt', 'Felt']];
 
 export function Customize() {
   const state = useNoir((s) => s.state);
@@ -19,6 +21,7 @@ export function Customize() {
     [next[i], next[j]] = [next[j]!, next[i]!];
     void patchSettings({ home: { favorites: next } });
   };
+  const onDevice = state.deployment === 'android-tv' && state.tv.adapter === 'none';
   const inputs = state.tv.inputs.length ? state.tv.inputs.map((i) => i.id) : Object.keys(s.inputs);
 
   return (
@@ -46,7 +49,7 @@ export function Customize() {
             <Btn key={a.id} className="!py-2" disabled={favs.length >= 12} onClick={() => void patchSettings({ home: { favorites: [...favs, a.id] } })}><Plus className="size-4" />{a.name}</Btn>
           ))}
         </div>
-        <Card className="mt-3 space-y-3">
+        {!onDevice && <Card className="mt-3 space-y-3">
           <div className="text-[0.9rem] text-fg">Custom shortcut</div>
           <Field label="Name" value={custom.name} maxLength={40} onChange={(e) => setCustom({ ...custom, name: e.target.value })} placeholder="e.g. Crunchyroll" />
           <Field label="Website (optional, used in browser mode)" value={custom.url} onChange={(e) => setCustom({ ...custom, url: e.target.value })} placeholder="https://…" inputMode="url" />
@@ -59,7 +62,7 @@ export function Customize() {
             } catch (e) { pushToast({ tone: 'error', title: (e as Error).message }); }
           }}>Add shortcut</Btn>
           <p className="text-[0.78rem] text-fg-muted">After pairing your TV, open the app on the TV and use “Learn from TV” on it in NOIR so it can launch.</p>
-        </Card>
+        </Card>}
       </Section>
 
       <Section title="Accent color">
@@ -85,7 +88,7 @@ export function Customize() {
         </Card>
       </Section>
 
-      <Section title="Inputs">
+      {!onDevice && <Section title="Inputs">
         <div className="space-y-3">
           {inputs.map((id) => {
             const cfg = s.inputs[id] ?? { label: id, icon: 'tv' as const, hidden: false };
@@ -99,6 +102,10 @@ export function Customize() {
             );
           })}
         </div>
+      </Section>}
+
+      <Section title="Navigation sound">
+        <Segmented value={s.sound.style} options={SOUND_OPTIONS} onChange={(style) => void patchSettings({ sound: { style } })} />
       </Section>
 
       <Section title="Ambient">

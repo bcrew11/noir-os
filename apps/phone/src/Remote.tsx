@@ -4,6 +4,7 @@ import type { NavKey, RemoteKey } from '@noir/core';
 import { BrandMark, command, send, useNoir } from '@noir/ui';
 import { Btn, Section, cx, haptic } from './ui.tsx';
 import { allApps } from './apps.ts';
+import { Lights } from './Lights.tsx';
 
 type Target = 'noir' | 'tv';
 
@@ -16,6 +17,8 @@ export function Remote() {
   const state = useNoir((s) => s.state);
   const [target, setTarget] = useState<Target>('noir');
   const tvKeys = state?.tv.capabilities.remoteKeys.level !== 'unsupported';
+  // NOIR as the Google TV launcher: no TV link, the remote drives NOIR itself.
+  const onDevice = state?.deployment === 'android-tv' && state.tv.adapter === 'none';
 
   const press = (k: NavKey) => {
     haptic(10);
@@ -51,6 +54,9 @@ export function Remote() {
 
   return (
     <div>
+      {onDevice ? (
+        <p className="mb-5 px-2 text-center text-[0.8rem] leading-relaxed text-fg-muted">Controls NOIR on your TV. Inside Netflix, YouTube and other apps, use the remote in the Google TV app.</p>
+      ) : (
       <div className="mb-5 flex rounded-full bg-white/[0.05] p-1">
         {(['noir', 'tv'] as const).map((t) => (
           <button key={t} type="button" disabled={t === 'tv' && !tvKeys} onClick={() => { haptic(); setTarget(t); }}
@@ -59,6 +65,7 @@ export function Remote() {
           </button>
         ))}
       </div>
+      )}
       {target === 'tv' && <p className="-mt-2 mb-4 px-2 text-center text-[0.8rem] text-fg-muted">Keys go straight to the TV over Wi‑Fi — use this inside Netflix, YouTube TV, etc.{state?.tv.adapter === 'mock' ? ' (Demo: simulated.)' : ''}</p>}
 
       {/* D-pad */}
@@ -80,13 +87,15 @@ export function Remote() {
         <Btn label="Play/Pause" onClick={() => target === 'noir' ? void command({ type: 'music.playpause' }, { silent: true }) : press('playpause')}><Play className="size-5" /><Pause className="-ml-1.5 size-5" /></Btn>
       </div>
 
-      <div className="mx-auto mt-3 grid max-w-[22rem] grid-cols-4 gap-3">
+      {!onDevice && <div className="mx-auto mt-3 grid max-w-[22rem] grid-cols-4 gap-3">
         <Btn label="Volume down" onClick={() => void command({ type: 'tv.volumeStep', delta: -2 }, { silent: true })}><Volume1 className="size-5" /></Btn>
         <Btn label="Volume up" onClick={() => void command({ type: 'tv.volumeStep', delta: 2 }, { silent: true })}><Volume2 className="size-5" /></Btn>
         <Btn label="Mute" onClick={() => void command({ type: 'tv.mute' })}><VolumeX className={cx('size-5', state?.tv.audio.muted && 'text-highlight')} /></Btn>
         <Btn label="Power" variant="danger" onClick={() => void command({ type: 'tv.power', on: state?.tv.power !== 'on' })}><Power className="size-5" /></Btn>
-      </div>
+      </div>}
       {state?.tv.audio.volume != null && <p className="mt-2 text-center text-[0.8rem] tabular-nums text-fg-muted">Volume {state.tv.audio.volume}{state.tv.audio.muted ? ' · muted' : ''}</p>}
+
+      <Lights />
 
       <Section title="Apps">
         <div className="grid grid-cols-3 gap-2.5">
@@ -99,7 +108,7 @@ export function Remote() {
         </div>
       </Section>
 
-      <Section title="Inputs">
+      {!onDevice && <Section title="Inputs">
         <div className="flex flex-wrap gap-2">
           {inputs.filter((i) => !state?.settings.inputs[i.id]?.hidden).map((i) => (
             <Btn key={i.id} variant={state?.tv.currentInput === i.id ? 'primary' : 'glass'} onClick={() => void command({ type: 'tv.input', inputId: i.id })} className="!py-2.5">
@@ -108,7 +117,7 @@ export function Remote() {
           ))}
           {state?.settings.system.noirInputId && <Btn variant="ghost" onClick={() => void command({ type: 'tv.returnToNoir' })}>Return to NOIR</Btn>}
         </div>
-      </Section>
+      </Section>}
 
       {music?.track && (
         <Section title="Now playing">

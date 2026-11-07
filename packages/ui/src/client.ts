@@ -59,6 +59,10 @@ export function onLaunchOnDisplay(fn: LaunchListener) {
 }
 
 type NavListener = (key: NavKey) => void;
+/** Deliver a remote-control press as if it came from a connected phone (self-contained mode). */
+export function emitRemoteNav(key: NavKey) {
+  navListeners.forEach((fn) => fn(key));
+}
 const navListeners = new Set<NavListener>();
 export function onRemoteNav(fn: NavListener) {
   navListeners.add(fn);

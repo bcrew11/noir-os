@@ -283,7 +283,8 @@ function PhoneLinkDialog({ onClose }: { onClose: () => void }) {
         <div className="min-w-0 text-[1.15rem] leading-relaxed text-fg-muted">
           <p>Scan with your camera, or open:</p>
           {(link?.urls ?? []).slice(0, 2).map((u) => <p key={u} className="mt-1 break-all text-[1.3rem] font-medium text-fg">{u}</p>)}
-          <p className="mt-4">Add it to your Home Screen for an app-like remote.</p>
+          {link && !link.urls.length && <p className="mt-1 text-fg">The phone remote isn’t running. Check that this device is on Wi‑Fi or Ethernet, then reopen NOIR.</p>}
+          <p className="mt-4">On iPhone: in Safari tap Share → Add to Home Screen, then open NOIR from its icon and pair there.</p>
         </div>
       </div>
       <FButton id="phone-done" className="mt-7" label="Done" autoFocus onSelect={onClose} />
@@ -294,6 +295,7 @@ function PhoneLinkDialog({ onClose }: { onClose: () => void }) {
 /** Settings → Devices when NOIR is the launcher on a Google TV / Android TV device. */
 function ThisDevice({ s }: { s: NoirState }) {
   const count = installedApps().length;
+  const [linkOpen, setLinkOpen] = useState(false);
   return (
     <>
       <Group title="This device">
@@ -304,7 +306,14 @@ function ThisDevice({ s }: { s: NoirState }) {
       <Group title="TV">
         <FRow id="td-cec" icon={Power} title="Turn on with the TV" hint="On your TV, turn on CEC and set it to start on this device’s HDMI input. Then powering on the TV brings up NOIR." />
       </Group>
-      {s.phones.length === 0 && null}
+      <Group title="Phone remote">
+        <FRow id="td-phone" icon={Smartphone} title="Connect your phone" hint="Scan a QR code to open the NOIR remote on your phone. Works on iPhone and Android." onSelect={() => setLinkOpen(true)} />
+        {s.phones.map((p) => (
+          <FRow key={p.id} id={`td-ph-${p.id}`} icon={Smartphone} title={p.name} hint={`Paired ${new Date(p.createdAt).toLocaleDateString()}`} value="Remove"
+            onSelect={() => void api(`/api/phones/${p.id}`, { method: 'DELETE' })} />
+        ))}
+      </Group>
+      <AnimatePresence>{linkOpen && <PhoneLinkDialog key="phone" onClose={() => setLinkOpen(false)} />}</AnimatePresence>
     </>
   );
 }

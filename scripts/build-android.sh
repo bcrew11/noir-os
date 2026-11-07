@@ -7,5 +7,9 @@ npm run build -w @noir/tv -- --base=./ --outDir dist-android --emptyOutDir
 rm -rf android/app/src/main/assets/web
 mkdir -p android/app/src/main/assets
 cp -R apps/tv/dist-android android/app/src/main/assets/web
+# The phone remote, served by the stick at http://<stick>:8787/phone/
+npm run build -w @noir/phone
+rm -rf android/app/src/main/assets/phone
+cp -R apps/phone/dist android/app/src/main/assets/phone
 cd android && ./gradlew assembleRelease -q ${NOIR_VERSION_CODE:+-PnoirVersionCode=$NOIR_VERSION_CODE} ${NOIR_VERSION_NAME:+-PnoirVersionName=$NOIR_VERSION_NAME}
 echo "APK: android/app/build/outputs/apk/release/app-release.apk"

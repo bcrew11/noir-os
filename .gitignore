@@ -14,6 +14,7 @@ android/build
 android/app/build
 apps/tv/dist-android
 android/app/src/main/assets/web
+android/app/src/main/assets/phone
 android/noir-signing.keystore
 android/signing.properties
 

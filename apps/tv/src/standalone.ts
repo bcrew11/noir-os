@@ -12,6 +12,7 @@ import {
 import { setLocalBackend, useNoir } from '@noir/ui';
 import { androidBridge, installedApps, packageCache, type NowPlaying } from './lib/android.ts';
 import { allApps, launchApp } from './lib/apps.ts';
+import { denyPairing, pairedPhones, phoneUrl, removePhone, startPhoneHost } from './phoneHost.ts';
 
 const SETTINGS_KEY = 'noir.settings';
 
@@ -116,7 +117,7 @@ export function startStandalone() {
     photos: [],
     spotify: { configured: false, connected: false },
     weather: useNoir.getState().state?.weather ?? null,
-    phones: [],
+    phones: pairedPhones(),
   });
   const publish = () => useNoir.setState({ state: build(), status: 'online' });
 
@@ -129,8 +130,7 @@ export function startStandalone() {
         case 'app.launch': {
           const app = allApps(build()).find((a) => a.id === cmd.appId);
           if (!app) return failed('Unknown app.');
-          await launchApp(app);
-          return { status: 'sent', message: `Opening ${app.name}` };
+          return (await launchApp(app, { quiet: true })) ?? failed('Couldn’t open the app.');
         }
         case 'music.playpause': case 'music.next': case 'music.previous': {
           bridge?.mediaKey(cmd.type.slice(6));
@@ -146,13 +146,24 @@ export function startStandalone() {
       saveSettings(settings);
       publish();
     },
-    async api(path) {
+    async api(path, init) {
       if (path === '/api/tv/refresh') { apps = discoverApps(); publish(); return {}; }
+      if (path === '/api/phone/pair/deny') { denyPairing(); return {}; }
+      if (path === '/api/phone/link') {
+        const url = phoneUrl();
+        if (!url) return { urls: [], qrSvg: null };
+        const QR = await import('qrcode');
+        const qrSvg = await QR.toString(url, { type: 'svg', margin: 1, color: { dark: '#f8f7fc', light: '#00000000' } });
+        return { urls: [url], qrSvg };
+      }
+      const del = path.match(/^\/api\/phones\/(.+)$/);
+      if (del && init.method === 'DELETE') { removePhone(decodeURIComponent(del[1]!)); return {}; }
       throw new Error('Not available on this device.');
     },
   });
 
   publish();
+  startPhoneHost();
 
   // Re-scan apps when NOIR comes back to the foreground (the user may have installed something).
   document.addEventListener('visibilitychange', () => {

@@ -1,4 +1,4 @@
-import { APP_CATALOG, type AppDefinition, type NoirState } from '@noir/core';
+import { APP_CATALOG, type AppDefinition, type CommandResult, type NoirState } from '@noir/core';
 import { command, pushToast, useNoir } from '@noir/ui';
 import { androidBridge, packageCache } from './android.ts';
 
@@ -52,26 +52,27 @@ export const READINESS_LABEL: Record<LaunchReadiness, string> = {
   'not-installed': 'Not installed',
 };
 
-export async function launchApp(app: AppDefinition) {
+/** Opens an app. On the Google TV launcher, returns what actually happened (for the phone remote). */
+export async function launchApp(app: AppDefinition, opts: { quiet?: boolean } = {}): Promise<CommandResult | undefined> {
   const state = useNoir.getState().state;
   const bridge = androidBridge();
   if (bridge) {
     const pkg = androidPackageFor(app);
     if (!pkg) {
-      pushToast({ tone: 'warning', title: `${app.name} isn’t installed yet`, body: 'Opening Google Play so you can install it.' });
+      if (!opts.quiet) pushToast({ tone: 'warning', title: `${app.name} isn’t installed yet`, body: 'Opening Google Play so you can install it.' });
       openInStore(app);
-      return;
+      return { status: 'unsupported', message: `${app.name} isn’t installed — opened Google Play on the TV.` };
     }
     const res = JSON.parse(bridge.launch(pkg)) as { ok: boolean; message: string };
-    pushToast({ tone: res.ok ? 'success' : 'error', title: res.ok ? `Opening ${app.name}` : res.message });
-    return;
+    if (!opts.quiet) pushToast({ tone: res.ok ? 'success' : 'error', title: res.ok ? `Opening ${app.name}` : res.message });
+    return res.ok ? { status: 'verified', message: `Opened ${app.name} on the TV` } : { status: 'failed', message: res.message };
   }
   const r = launchReadiness(state, app.id);
   if (r === 'no-tv' && state?.deployment === 'browser' && app.webUrl) {
     pushToast({ tone: 'warning', title: `${app.name} can’t open on a TV yet`, body: 'No television is paired. Pair one in Settings → Devices.' });
     return;
   }
-  await command({ type: 'app.launch', appId: app.id });
+  return command({ type: 'app.launch', appId: app.id });
 }
 
 /** The input featured on the Home widget: the user's choice, else the first HDMI source that isn't a soundbar. */

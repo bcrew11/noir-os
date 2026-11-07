@@ -79,6 +79,7 @@ class MainActivity : Activity() {
         }
         setContentView(web)
         NoirBus.attach(this)
+        startPhoneServer()
         Updater.check()
         acceptGoveeKey(intent)
         @Suppress("DEPRECATION")
@@ -109,8 +110,44 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        phoneServer?.stop()
+        phoneServer = null
         NoirBus.detach(this)
         super.onDestroy()
+    }
+
+    /* ----------------------------- phone app hosting ----------------------------- */
+
+    private var phoneServer: PhoneServer? = null
+    private var phonePort = 0
+
+    /** Hosts the NOIR phone app on the LAN (self-contained mode only). API calls are answered by the page. */
+    private fun startPhoneServer() {
+        if (serverUrl() != null) return
+        for (port in listOf(8787, 8788, 8789)) {
+            try {
+                val srv = PhoneServer(port, { name -> try { assets.open("phone/$name") } catch (e: Exception) { null } }, object : PhoneServer.Relay {
+                    override fun request(id: String, method: String, path: String, authorization: String?, body: String?, remote: String) {
+                        val args = listOf(id, method, path, authorization ?: "", body ?: "", remote).joinToString(",") { JSONObject.quote(it) }
+                        runJs("window.__noirPhoneRequest ? window.__noirPhoneRequest($args) : NoirAndroid.phoneRespond(${JSONObject.quote(id)}, 503, '{\"message\":\"NOIR is starting\"}')")
+                    }
+                    override fun socket(event: String, clientId: String, data: String?) {
+                        runJs("window.__noirPhoneSocket && window.__noirPhoneSocket(${JSONObject.quote(event)}, ${JSONObject.quote(clientId)}, ${JSONObject.quote(data ?: "")})")
+                    }
+                })
+                srv.startServing()
+                phoneServer = srv
+                phonePort = port
+                return
+            } catch (e: Exception) { /* port busy: try the next */ }
+        }
+    }
+
+    /** The stick's LAN IPv4 address (Wi-Fi or Ethernet). */
+    private fun lanAddress(): String? {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val props = cm.getLinkProperties(cm.activeNetwork) ?: return null
+        return props.linkAddresses.map { it.address }.firstOrNull { it is java.net.Inet4Address && !it.isLoopbackAddress }?.hostAddress
     }
 
     fun runJs(js: String) = runOnUiThread { if (::web.isInitialized) web.evaluateJavascript(js, null) }
@@ -220,6 +257,19 @@ class MainActivity : Activity() {
         } catch (e: Exception) { false }
 
         /** True when NOIR is the selected system screensaver. */
+        /** URL phones should open, e.g. http://192.168.4.130:8787/phone/ (null if not hosting). */
+        @JavascriptInterface
+        fun phoneUrl(): String? = if (phoneServer == null) null else lanAddress()?.let { "http://$it:$phonePort/phone/" }
+
+        @JavascriptInterface
+        fun phoneRespond(id: String, status: Int, body: String) { phoneServer?.complete(id, status, body) }
+
+        @JavascriptInterface
+        fun phoneSend(clientId: String, text: String) { phoneServer?.send(clientId, text) }
+
+        @JavascriptInterface
+        fun phoneClose(clientId: String) { phoneServer?.close(clientId) }
+
         @JavascriptInterface
         fun isScreensaver(): Boolean {
             val flat = Settings.Secure.getString(contentResolver, "screensaver_components") ?: return false

@@ -26,6 +26,42 @@ export function Devices() {
     setAwaitingPin(true);
   });
 
+  const phones = (
+    <Section title="Paired phones">
+      <Card className="!p-2">
+        {state.phones.map((p) => (
+          <div key={p.id} className="flex items-center gap-2 px-2 py-1.5">
+            <span className="flex-1 truncate">{p.name}</span>
+            <Btn variant="ghost" onClick={() => void api(`/api/phones/${p.id}`, { method: 'DELETE' })}>Remove</Btn>
+          </div>
+        ))}
+      </Card>
+    </Section>
+  );
+  const footer = <p className="mt-6 text-center text-[0.75rem] text-fg-dim">NOIR {state.version} · {state.mode === 'demo' ? 'demo mode' : 'live'} · {state.deployment}</p>;
+
+  // NOIR is the Google TV launcher itself: nothing to pair or switch to.
+  if (state.deployment === 'android-tv' && tv.adapter === 'none') {
+    return (
+      <div>
+        <Section title="Television">
+          <Card>
+            <div className="flex items-center gap-3">
+              <div className="grid size-12 place-items-center rounded-2xl bg-primary/20"><Tv className="size-6 text-highlight" /></div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[1rem]">NOIR on Google TV</div>
+                <div className="truncate text-[0.82rem] text-fg-muted">Connected over Wi‑Fi</div>
+              </div>
+            </div>
+            <p className="mt-3 text-[0.82rem] leading-relaxed text-fg-muted">Lights, music and app settings are set up on the TV, in NOIR’s Settings. This phone works while NOIR is open on the TV.</p>
+          </Card>
+        </Section>
+        {phones}
+        {footer}
+      </div>
+    );
+  }
+
   const inputs = [null, ...(tv.inputs.length ? tv.inputs.map((i) => i.id) : Object.keys(state.settings.inputs))];
 
   return (
@@ -115,17 +151,8 @@ export function Devices() {
         </Card>
       </Section>
 
-      <Section title="Paired phones">
-        <Card className="!p-2">
-          {state.phones.map((p) => (
-            <div key={p.id} className="flex items-center gap-2 px-2 py-1.5">
-              <span className="flex-1 truncate">{p.name}</span>
-              <Btn variant="ghost" onClick={() => void api(`/api/phones/${p.id}`, { method: 'DELETE' })}>Remove</Btn>
-            </div>
-          ))}
-        </Card>
-      </Section>
-      <p className="mt-6 text-center text-[0.75rem] text-fg-dim">NOIR {state.version} · {state.mode === 'demo' ? 'demo mode' : 'live'} · {state.deployment}</p>
+      {phones}
+      {footer}
     </div>
   );
 }

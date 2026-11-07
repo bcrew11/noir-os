@@ -52,4 +52,7 @@ android {
 
 dependencies {
     implementation("androidx.webkit:webkit:1.12.1")
+    // Small embedded HTTP + WebSocket server: the stick hosts the NOIR phone app on the LAN.
+    implementation("org.nanohttpd:nanohttpd-websocket:2.3.1")
+    testImplementation("junit:junit:4.13.2")
 }
