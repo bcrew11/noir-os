@@ -14,7 +14,7 @@ import { SOUND_HINTS, SOUND_STYLES, playSound, type SoundStyle } from '../lib/so
 import { RemoteButtonsSettings } from '../components/RemoteButtons.tsx';
 import { Keyboard } from '../components/Keyboard.tsx';
 import { FButton, FRow, Pill, Toggle, cx } from '../components/primitives.tsx';
-import { useFocusable } from '../focus/focus.ts';
+import { focusFirstWithin, useFocusable } from '../focus/focus.ts';
 import { useScreenFocus } from '../hooks/useScreenFocus.ts';
 import { widgetInput } from '../lib/apps.ts';
 import { androidBridge, installedApps, isStandalone, readUpdateStatus } from '../lib/android.ts';
@@ -52,7 +52,14 @@ function pickList(title: string, value: string, choices: Choice[], onPick: (v: s
 }
 
 function SectionItem({ s, active }: { s: (typeof SECTIONS)[number]; active: boolean }) {
-  const { ref, focused, pointer } = useFocusable<HTMLButtonElement>(`sec-${s.id}`, { group: 'sections', onSelect: () => useUI.setState({ settingsSection: s.id }) });
+  const { ref, focused, pointer } = useFocusable<HTMLButtonElement>(`sec-${s.id}`, {
+    group: 'sections',
+    // OK on a section jumps straight into its settings (the panel renders on the next frame).
+    onSelect: () => {
+      useUI.setState({ settingsSection: s.id });
+      requestAnimationFrame(() => focusFirstWithin(document.querySelector('[data-settings-panel]')));
+    },
+  });
   useEffect(() => { if (focused) useUI.setState({ settingsSection: s.id }); }, [focused, s.id]);
   const Icon = s.icon;
   return (
@@ -505,7 +512,7 @@ export default function Settings() {
         <h1 className="mb-7 px-2 text-[3rem] font-semibold tracking-[-0.02em]">Settings</h1>
         <div className="flex flex-col gap-1.5">{SECTIONS.map((x) => <SectionItem key={x.id} s={x} active={section === x.id} />)}</div>
       </aside>
-      <section className="scroll-hidden glass min-w-0 flex-1 overflow-y-auto rounded-[2rem] p-8" style={{ background: 'linear-gradient(180deg, rgba(36,28,52,0.55), rgba(20,16,30,0.6))' }}>
+      <section data-settings-panel className="scroll-hidden glass min-w-0 flex-1 overflow-y-auto rounded-[2rem] p-8" style={{ background: 'linear-gradient(180deg, rgba(36,28,52,0.55), rgba(20,16,30,0.6))' }}>
         {section === 'appearance' && <Appearance s={state} />}
         {section === 'home' && <HomeSection s={state} />}
         {section === 'devices' && (isStandalone() ? <ThisDevice s={state} /> : <Devices s={state} />)}

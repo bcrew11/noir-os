@@ -99,3 +99,18 @@ test('Home on the Home screen jumps to the nav bar', async ({ page }) => {
   await page.keyboard.press('h');
   await expect(page.locator('nav [data-focused]')).toHaveText(/Home/);
 });
+
+test('OK on a Settings section moves focus to the top of its settings', async ({ page }) => {
+  await page.goto(TV);
+  await expect(page.locator('[data-app="youtube-tv"]')).toHaveAttribute('data-focused', 'true');
+  await page.click('nav >> text=Settings');
+  await page.mouse.move(5, 5);
+  await expect(page.locator('aside [data-focused]')).toHaveText(/Appearance/);
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('aside [data-focused]')).toHaveText(/Home Screen/);
+  await page.keyboard.press('Enter');
+  const panel = page.locator('[data-settings-panel]');
+  // The first Home Screen setting, with the panel scrolled to the top.
+  await expect(panel.locator('[data-focused]')).toHaveText(/^Arrange apps/);
+  expect(await panel.evaluate((p) => p.scrollTop)).toBe(0);
+});

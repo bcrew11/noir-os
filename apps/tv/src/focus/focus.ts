@@ -143,6 +143,17 @@ export function firstIn(scope = activeScope()): string | undefined {
   return list[0]?.n.id;
 }
 
+/** Focus the top-left item inside a container (e.g. a settings panel), scrolling it to the top. */
+export function focusFirstWithin(container: Element | null): boolean {
+  if (!container) return false;
+  const list = navigable().filter((n) => container.contains(n.el)).map((n) => ({ n, r: settledRect(n.el) }));
+  list.sort((a, b) => a.r.top - b.r.top || a.r.left - b.r.left);
+  const first = list[0]?.n;
+  if (!first) return false;
+  if (container instanceof HTMLElement) container.scrollTop = 0;
+  return focus(first.id);
+}
+
 export function move(dir: Direction): boolean {
   const scope = activeScope();
   const { focusedId } = useFocusStore.getState();
