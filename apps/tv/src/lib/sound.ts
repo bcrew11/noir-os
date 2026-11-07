@@ -159,7 +159,7 @@ function swell(ctx: Ctx, out: AudioNode, wet: AudioNode, t: number, f: number, c
  * A retro synth "bloop": a square wave through a resonant low-pass that closes as the note plays
  * (bright → dark gives the "bwop" vowel), with the pitch bending from `from` to `to`.
  */
-function bloop(ctx: Ctx, out: AudioNode, wet: AudioNode, t: number, from: number, to: number, peak: number, decay: number, cut: [number, number] = [2600, 650]) {
+function bloop(ctx: Ctx, out: AudioNode, wet: AudioNode, t: number, from: number, to: number, peak: number, decay: number, cut: [number, number] = [2600, 650], attack = 0.006) {
   const o = ctx.createOscillator();
   o.type = 'square';
   o.frequency.setValueAtTime(from, t);
@@ -169,9 +169,9 @@ function bloop(ctx: Ctx, out: AudioNode, wet: AudioNode, t: number, from: number
   lp.frequency.setValueAtTime(cut[0], t);
   lp.frequency.exponentialRampToValueAtTime(cut[1], t + decay * 0.8);
   const soft = ctx.createBiquadFilter(); // keep the square's top end from getting buzzy
-  soft.type = 'lowpass'; soft.frequency.value = 3200; soft.Q.value = 0.5;
+  soft.type = 'lowpass'; soft.frequency.value = 5200; soft.Q.value = 0.5;
   const g = ctx.createGain();
-  env(ctx, g, t, peak, 0.006, decay);
+  env(ctx, g, t, peak, attack, decay);
   o.connect(lp).connect(soft).connect(g);
   g.connect(out); g.connect(wet);
   o.start(t); o.stop(t + decay + 0.03);
@@ -292,17 +292,18 @@ export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: 
      * glint sweeping down above it, select bends up and twinkles, back bends down into a "blorp".
      */
     case 'cosmic': {
-      const wet = echo(ctx, out, 0.07, 0.15, 0.18);
+      // Sharp and dry: a quick attack, bright filter that snaps shut, only a trace of echo.
+      const wet = echo(ctx, out, 0.05, 0.05, 0.06);
       if (k === 0) {
-        bloop(ctx, out, wet, t, 560, 500, 0.2, 0.09);
-        smooth(ctx, out, wet, t + 0.004, 2600, 1700, 0.022, 0.006, 0.07);
+        bloop(ctx, out, wet, t, 900, 820, 0.2, 0.055, [4800, 1300], 0.002);
+        smooth(ctx, out, wet, t + 0.003, 3600, 2400, 0.025, 0.002, 0.045);
       }
       if (k === 1) {
-        bloop(ctx, out, wet, t, 420, 640, 0.2, 0.12, [1400, 2400]);
-        smooth(ctx, out, wet, t + 0.06, 2093, 2093, 0.03, 0.008, 0.12, { vibrato: 14, depth: 25 });
-        smooth(ctx, out, wet, t + 0.09, 3136, 3136, 0.02, 0.008, 0.14, { vibrato: 14, depth: 35 });
+        bloop(ctx, out, wet, t, 700, 1050, 0.2, 0.075, [3000, 4800], 0.002);
+        smooth(ctx, out, wet, t + 0.045, 2794, 2794, 0.03, 0.003, 0.09, { vibrato: 16, depth: 30 });
+        smooth(ctx, out, wet, t + 0.07, 3951, 3951, 0.02, 0.003, 0.1, { vibrato: 16, depth: 45 });
       }
-      if (k === 2) bloop(ctx, out, wet, t, 600, 340, 0.21, 0.13, [2200, 450]);
+      if (k === 2) bloop(ctx, out, wet, t, 1000, 560, 0.21, 0.08, [4400, 900], 0.002);
       break;
     }
     case 'off':
