@@ -67,7 +67,7 @@ export default function Apps() {
               const onHome = favorites.includes(app.id);
               return (
                 <div key={app.id} className="flex flex-col gap-3">
-                  <AppCard app={app} size="grid" focusId={`lib-${app.id}`} group="library" onSelect={() => setOptions(app)}
+                  <AppCard app={app} size="grid" focusId={`lib-${app.id}`} group="library" scrollAlign="start" onSelect={() => setOptions(app)}
                     badge={onHome ? <span className="grid size-8 place-items-center rounded-full bg-highlight/90 text-ink-900"><Check className="size-5" strokeWidth={2.6} /></span> : undefined} />
                   <div className="flex items-center justify-between px-1">
                     <span className="truncate text-[1.15rem] text-fg/90">{app.name}</span>
@@ -78,6 +78,8 @@ export default function Apps() {
             })}
           </div>
         )}
+        {/* Room below the last row so every row can be scrolled to the top. */}
+        <div aria-hidden className="h-[30rem]" />
       </div>
 
       <AnimatePresence>

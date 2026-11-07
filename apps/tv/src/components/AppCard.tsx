@@ -14,14 +14,15 @@ interface Props {
   size?: 'hero' | 'grid';
   badge?: React.ReactNode;
   autoFocus?: boolean;
+  scrollAlign?: 'nearest' | 'start';
 }
 
 /**
  * Primary app card. On focus: scale to ~105%, lift, brighten the border, bloom a soft
  * lavender glow and tint with the app's own brand glow. 220ms, no bounce.
  */
-export function AppCard({ app, focusId, group, onSelect, onLongSelect, size = 'hero', badge, autoFocus }: Props) {
-  const { ref, focused, pointer } = useFocusable<HTMLDivElement>(focusId, { group, onSelect, onLongSelect, autoFocus });
+export function AppCard({ app, focusId, group, onSelect, onLongSelect, size = 'hero', badge, autoFocus, scrollAlign }: Props) {
+  const { ref, focused, pointer } = useFocusable<HTMLDivElement>(focusId, { group, onSelect, onLongSelect, autoFocus, scrollAlign });
   const logo = useNoir((s) => s.state?.logos[app.id]);
   const level = useMotion();
   return (

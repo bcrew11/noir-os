@@ -19,6 +19,8 @@ interface Node {
   disabled?: boolean;
   onSelect?: () => void;
   onLongSelect?: () => void;
+  /** 'start' pins the element's row to the top of its scroll area (e.g. the App Library grid). */
+  scrollAlign?: 'nearest' | 'start';
 }
 
 interface FocusState {
@@ -40,9 +42,9 @@ const activeScope = () => {
 
 const lowPerf = () => document.documentElement.classList.contains('low-perf');
 
-function scrollIntoView(el: HTMLElement) {
+function scrollIntoView(el: HTMLElement, align: 'nearest' | 'start' = 'nearest') {
   const reduced = document.documentElement.dataset.motion !== 'full' || lowPerf();
-  el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+  el.scrollIntoView({ block: align, inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
 }
 
 export function focus(id: string | null | undefined, opts: { scroll?: boolean } = {}) {
@@ -52,7 +54,7 @@ export function focus(id: string | null | undefined, opts: { scroll?: boolean } 
   useFocusStore.setState({ focusedId: id });
   if (n.group) groupMemory.set(`${n.scope}:${n.group}`, id);
   scopeMemory.set(n.scope, id);
-  if (opts.scroll !== false) scrollIntoView(n.el);
+  if (opts.scroll !== false) scrollIntoView(n.el, n.scrollAlign);
   // Parallax hint for the background (normalised -1..1). Writing a variable on <html> restyles the
   // whole page, so skip it whenever parallax is off (reduced motion / streaming sticks).
   if (lowPerf() || document.documentElement.dataset.motion !== 'full') return true;
@@ -146,6 +148,7 @@ export interface FocusableOptions {
   onSelect?: () => void;
   onLongSelect?: () => void;
   autoFocus?: boolean;
+  scrollAlign?: 'nearest' | 'start';
 }
 
 /** Register an element with the focus engine. Returns a ref and whether it is focused. */
@@ -162,6 +165,7 @@ export function useFocusable<T extends HTMLElement = HTMLDivElement>(id: string,
       id, el, scope,
       get group() { return latest.current.group; },
       get disabled() { return latest.current.disabled; },
+      get scrollAlign() { return latest.current.scrollAlign; },
       onSelect: () => latest.current.onSelect?.(),
       get onLongSelect() { return latest.current.onLongSelect; },
     } as Node);
