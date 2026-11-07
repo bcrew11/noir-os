@@ -59,7 +59,7 @@ class PhoneServer(
 
     private fun relayApi(session: IHTTPSession): Response {
         val len = session.headers["content-length"]?.toIntOrNull() ?: 0
-        if (len > 256 * 1024) return json(413, """{"message":"Too large"}""")
+        if (len > 4 * 1024 * 1024) return json(413, """{"message":"Too large"}""")
         val body = if (len > 0) {
             val buf = ByteArray(len)
             var read = 0

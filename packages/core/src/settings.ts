@@ -79,7 +79,7 @@ export const SettingsSchema = z.object({
   }).default({}),
   sound: z.object({
     /** Navigation sound style (see apps/tv/src/lib/sound.ts). */
-    style: z.enum(['off', 'thock', 'tactile', 'creamy', 'tick', 'glass', 'wood', 'bubble', 'felt', 'hud', 'holo', 'scan', 'cosmic']).default('tick'),
+    style: z.enum(['off', 'thock', 'tactile', 'creamy', 'tick', 'glass', 'wood', 'bubble', 'felt', 'hud', 'holo', 'scan', 'cosmic', 'custom']).default('tick'),
     volume: z.number().min(0.1).max(1).default(0.6),
   }).default({}),
   music: z.object({

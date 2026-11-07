@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { ACCENTS, AMBIENT_THEMES, BACKGROUNDS, CATEGORY_LABELS, INPUT_ICONS, type AccentId, type AppCategory, type Settings } from '@noir/core';
 import { api, patchSettings, pushToast, useNoir } from '@noir/ui';
 import { allApps } from './apps.ts';
+import { CustomSounds } from './CustomSounds.tsx';
 import { Btn, Card, Field, Section, Segmented, Toggle, cx } from './ui.tsx';
 
-const SOUND_OPTIONS: Array<[Settings['sound']['style'], string]> = [['off', 'Off'], ['thock', 'Thock'], ['tactile', 'Tactile'], ['creamy', 'Creamy'], ['tick', 'Tick'], ['glass', 'Glass'], ['wood', 'Wood'], ['bubble', 'Bubble'], ['felt', 'Felt'], ['hud', 'HUD'], ['holo', 'Hologram'], ['scan', 'Scanner'], ['cosmic', 'Cosmic']];
+const SOUND_OPTIONS: Array<[Settings['sound']['style'], string]> = [['off', 'Off'], ['thock', 'Thock'], ['tactile', 'Tactile'], ['creamy', 'Creamy'], ['tick', 'Tick'], ['glass', 'Glass'], ['wood', 'Wood'], ['bubble', 'Bubble'], ['felt', 'Felt'], ['hud', 'HUD'], ['holo', 'Hologram'], ['scan', 'Scanner'], ['cosmic', 'Cosmic'], ['custom', 'Custom']];
 
 export function Customize() {
   const state = useNoir((s) => s.state);
@@ -107,6 +108,7 @@ export function Customize() {
       <Section title="Navigation sound">
         <Segmented value={s.sound.style} options={SOUND_OPTIONS} onChange={(style) => void patchSettings({ sound: { style } })} />
       </Section>
+      {onDevice && <CustomSounds />}
 
       <Section title="Ambient">
         <Segmented value={s.ambient.theme} options={Object.entries(AMBIENT_THEMES) as Array<[keyof typeof AMBIENT_THEMES, string]>} onChange={(theme) => void patchSettings({ ambient: { theme } })} />

@@ -12,6 +12,7 @@ import { CommandSchema, NAV_KEYS, type NavKey, type NoirState, type PairedPhone 
 import { command, emitRemoteNav, patchSettings, useNoir } from '@noir/ui';
 import { androidBridge } from './lib/android.ts';
 import { getPower, goveeHasKey, setPower } from './lib/govee.ts';
+import { customSounds, playSound, setCustomSound, type SoundKind } from './lib/sound.ts';
 
 interface StoredPhone extends PairedPhone { hash: string }
 interface PairRequest { id: string; code: string; name: string; expiresAt: number; attempts: number }
@@ -148,11 +149,29 @@ async function handle(method: string, path: string, auth: string, body: string):
     if (r.status === 'verified') window.dispatchEvent(new CustomEvent('noir-light', { detail: { device: l.device, on: r.on } }));
     return [200, r];
   }
+  if (p === '/api/sounds/custom' && method === 'GET') return [200, soundSlots()];
+  const snd = p.match(/^\/api\/sounds\/custom\/(move|select|back)$/);
+  if (snd) {
+    const kind = snd[1] as SoundKind;
+    if (method === 'DELETE') { await setCustomSound(kind, null); return [200, soundSlots()]; }
+    if (method === 'PUT') {
+      const data = json().data;
+      if (typeof data !== 'string' || !data) return err(400, 'No audio file received.');
+      try { await setCustomSound(kind, data); } catch (e) { return err(400, (e as Error).message); }
+      playSound(kind, 'custom'); // let the room hear the new clip
+      return [200, soundSlots()];
+    }
+  }
   if (p === '/api/phones' && method === 'GET') return [200, pairedPhones()];
   const del = p.match(/^\/api\/phones\/([^/]+)$/);
   if (del && method === 'DELETE') { removePhone(decodeURIComponent(del[1]!)); return [200, { ok: true }]; }
 
   return err(404, 'Not available on the Google TV setup.');
+}
+
+function soundSlots() {
+  const s = customSounds();
+  return { move: !!s.move, select: !!s.select, back: !!s.back };
 }
 
 function snapshot(): NoirState | null {

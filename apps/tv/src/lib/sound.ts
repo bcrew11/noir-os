@@ -19,6 +19,7 @@ export const SOUND_STYLES = {
   holo: 'Hologram',
   scan: 'Scanner',
   cosmic: 'Cosmic',
+  custom: 'Custom',
 } as const;
 export type SoundStyle = keyof typeof SOUND_STYLES;
 export type SoundKind = 'move' | 'select' | 'back';
@@ -37,6 +38,7 @@ export const SOUND_HINTS: Record<SoundStyle, string> = {
   holo: 'A soft shimmering tone with a breath of air — a hologram coming to life.',
   scan: 'A rounded synth swell that brightens as it plays — data rolling past.',
   cosmic: 'Retro space synth — warm bloops, a faint laser glint and a little sparkle.',
+  custom: 'Your own clips, added from the NOIR phone remote (Customize → Custom sounds).',
 };
 
 type Ctx = BaseAudioContext;
@@ -178,7 +180,7 @@ function bloop(ctx: Ctx, out: AudioNode, wet: AudioNode, t: number, from: number
 }
 
 /** Per-style level trim so every style sounds about equally loud (measured peaks, ~0.3). */
-const STYLE_TRIM: Record<SoundStyle, number> = { off: 0, thock: 0.47, tactile: 0.62, creamy: 0.83, tick: 1.75, glass: 3, wood: 1.1, bubble: 1.5, felt: 0.95, hud: 1.05, holo: 1.2, scan: 0.6, cosmic: 0.8 };
+const STYLE_TRIM: Record<SoundStyle, number> = { off: 0, thock: 0.47, tactile: 0.62, creamy: 0.83, tick: 1.75, glass: 3, wood: 1.1, bubble: 1.5, felt: 0.95, hud: 1.05, holo: 1.2, scan: 0.6, cosmic: 0.8, custom: 0 };
 
 /** Schedule one sound on any (online or offline) audio context. */
 export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: SoundKind, t = ctx.currentTime) {
@@ -306,6 +308,7 @@ export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: 
       if (k === 2) bloop(ctx, out, wet, t, 1000, 560, 0.21, 0.08, [4400, 900], 0.002);
       break;
     }
+    case 'custom': // pre-recorded clips, see setCustomSound
     case 'off':
       break;
   }
@@ -341,11 +344,63 @@ async function prerender(style: SoundStyle) {
   if (!live) return;
   const set: Partial<Record<SoundKind, AudioBuffer>> = {};
   clips.set(style, set);
+  if (style === 'custom') {
+    const stored = customSounds();
+    for (const kind of ['move', 'select', 'back'] as const) {
+      const b64 = stored[kind];
+      if (b64) set[kind] = await live.decodeAudioData(fromBase64(b64)).catch(() => undefined);
+    }
+    return;
+  }
   for (const kind of ['move', 'select', 'back'] as const) {
     const off = new OfflineAudioContext(1, Math.ceil(live.sampleRate * 0.5), live.sampleRate);
     renderSound(off, off.destination, style, kind, 0.005);
     set[kind] = await off.startRendering();
   }
+}
+
+/* ------------------------------ custom clips ------------------------------- */
+
+const CUSTOM_KEY = 'noir.customSounds';
+const MAX_CUSTOM_SEC = 2;
+
+/** The user's own clips (16-bit mono WAV, base64), kept only on this device. */
+export function customSounds(): Partial<Record<SoundKind, string>> {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) ?? '{}') as Partial<Record<SoundKind, string>>; } catch { return {}; }
+}
+
+function fromBase64(b64: string): ArrayBuffer {
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+}
+
+/**
+ * Store (or with `null`, remove) a custom clip from any audio file the browser can decode.
+ * It's mixed to mono, trimmed to 2 s with a short fade, and level-matched to NOIR's own sounds.
+ */
+export async function setCustomSound(kind: SoundKind, fileBase64: string | null): Promise<void> {
+  const all = customSounds();
+  if (fileBase64 === null) delete all[kind];
+  else {
+    const live = audio();
+    if (!live) throw new Error('Audio isn’t available on this device.');
+    const src = await live.decodeAudioData(fromBase64(fileBase64)).catch(() => { throw new Error('That file isn’t a supported audio format.'); });
+    const n = Math.min(src.length, Math.floor(src.sampleRate * MAX_CUSTOM_SEC));
+    const mono = live.createBuffer(1, n, src.sampleRate);
+    const d = mono.getChannelData(0);
+    for (let c = 0; c < src.numberOfChannels; c++) {
+      const ch = src.getChannelData(c);
+      for (let i = 0; i < n; i++) d[i]! += ch[i]! / src.numberOfChannels;
+    }
+    const fade = Math.min(n, Math.floor(src.sampleRate * 0.02));
+    for (let i = 0; i < fade; i++) d[n - 1 - i]! *= i / fade;
+    let peak = 0;
+    for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(d[i]!));
+    if (peak < 1e-4) throw new Error('That clip is silent.');
+    all[kind] = wavBase64(mono, 0.3 / peak); // same peak level as the built-in styles
+  }
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(all)); } catch { throw new Error('Not enough storage on the TV for that clip.'); }
+  clips.delete('custom');
+  if (current.style === 'custom') { nativeFor = ''; await prerender('custom'); await loadNative(); }
 }
 
 /** 16-bit mono WAV, base64 — the format handed to the native player. */

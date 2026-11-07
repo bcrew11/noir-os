@@ -144,6 +144,22 @@ try {
   const launched = await tv.evaluate(() => window.__launched);
   check(launched.length > 0, `app shortcut launched natively (${launched.join(', ') || 'none'})`);
 
+  // Custom sound: upload a clip from the phone; the TV stores it and switches to the Custom style.
+  // (Generated here: a short 660 Hz beep as a WAV file.)
+  const sr = 22050, n = Math.floor(sr / 4), wav = Buffer.alloc(44 + n * 2);
+  wav.write('RIFF', 0); wav.writeUInt32LE(36 + n * 2, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(sr, 24); wav.writeUInt32LE(sr * 2, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(n * 2, 40);
+  for (let i = 0; i < n; i++) wav.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 660 * i) / sr) * 12000 * (1 - i / n)), 44 + i * 2);
+  await phone.getByRole('button', { name: 'Customize' }).click();
+  await phone.getByText('Custom sounds').waitFor({ timeout: 5000 });
+  await phone.locator('input[type=file]').first().setInputFiles({ name: 'beep.wav', mimeType: 'audio/wav', buffer: wav });
+  await phone.getByText('Custom clip set').waitFor({ timeout: 8000 }).then(() => check(true, 'custom clip uploaded'), () => check(false, 'custom clip uploaded'));
+  const custom = await tv.evaluate(() => ({ stored: Object.keys(JSON.parse(localStorage.getItem('noir.customSounds') ?? '{}')), style: JSON.parse(localStorage.getItem('noir.settings') ?? '{}').sound?.style }));
+  check(custom.stored.join() === 'move' && custom.style === 'custom', `TV stored the clip and switched to Custom (${JSON.stringify(custom)})`);
+  const bad = await phone.evaluate(async () => (await fetch('/api/sounds/custom/select', { method: 'PUT', headers: { Authorization: `Bearer ${localStorage.getItem('noir.token')}` }, body: JSON.stringify({ data: btoa('not audio') }) })).status);
+  check(bad === 400, 'non-audio upload rejected');
+  await phone.getByRole('button', { name: 'Remote' }).click();
+
   // Removing the phone on the TV revokes it.
   const id = tvPhones[0].id;
   const del = await phone.evaluate(async (pid) => (await fetch(`/api/phones/${pid}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('noir.token')}` } })).status, id);
