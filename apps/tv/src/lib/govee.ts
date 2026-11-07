@@ -3,18 +3,10 @@
  * The API key is stored and attached natively; this module never sees it.
  * API reference: https://developer.govee.com/reference/control-you-devices
  */
-import { androidBridge } from './android.ts';
+import { androidBridge, awaitNative, nativeCallbackId } from './android.ts';
 
 export interface GoveeDevice { device: string; sku: string; name: string; canPower: boolean }
 export interface PowerResult { status: 'verified' | 'sent' | 'failed'; on: boolean | null; message: string }
-
-type Pending = { resolve: (v: { status: number; body: string }) => void };
-const pending = new Map<string, Pending>();
-let seq = 0;
-(globalThis as { __noirNative?: (id: string, status: number, body: string) => void }).__noirNative = (id, status, body) => {
-  pending.get(id)?.resolve({ status, body });
-  pending.delete(id);
-};
 
 export const goveeAvailable = () => typeof androidBridge()?.goveeRequest === 'function';
 export const goveeHasKey = () => { try { return !!androidBridge()?.goveeHasKey?.(); } catch { return false; } };
@@ -23,21 +15,17 @@ export const goveeSetKey = (key: string) => androidBridge()?.goveeSetKey?.(key.t
 function call(method: 'GET' | 'POST', path: string, body?: unknown): Promise<{ status: number; json: Record<string, unknown> }> {
   const bridge = androidBridge();
   if (!bridge?.goveeRequest) return Promise.reject(new Error('Smart home control runs on the NOIR Google TV launcher.'));
-  const id = `g${++seq}`;
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => { pending.delete(id); reject(new Error('Govee didn’t respond.')); }, 20000);
-    pending.set(id, {
-      resolve: ({ status, body }) => {
-        clearTimeout(timer);
-        let json: Record<string, unknown> = {};
-        try { json = JSON.parse(body || '{}') as Record<string, unknown>; } catch { /* non-JSON error page */ }
-        if (status === 401 || status === 403) reject(new Error('Govee rejected the API key. Check it in Settings → Smart Home.'));
-        else if (status === 429) reject(new Error('Govee rate limit reached; try again in a minute.'));
-        else if (status < 200 || status >= 300) reject(new Error(String(json.message ?? `Govee error ${status}`)));
-        else resolve({ status, json });
-      },
-    });
-    bridge.goveeRequest!(id, method, path, body === undefined ? null : JSON.stringify(body));
+  const id = nativeCallbackId('govee');
+  const result = awaitNative(id, 20000).catch(() => { throw new Error('Govee didn’t respond.'); });
+  bridge.goveeRequest(id, method, path, body === undefined ? null : JSON.stringify(body));
+  return result.then(([statusRaw, bodyRaw]) => {
+    const status = Number(statusRaw);
+    let json: Record<string, unknown> = {};
+    try { json = JSON.parse(String(bodyRaw || '{}')) as Record<string, unknown>; } catch { /* non-JSON error page */ }
+    if (status === 401 || status === 403) throw new Error('Govee rejected the API key. Check it in Settings → Smart Home.');
+    if (status === 429) throw new Error('Govee rate limit reached; try again in a minute.');
+    if (status < 200 || status >= 300) throw new Error(String(json.message ?? `Govee error ${status}`));
+    return { status, json };
   });
 }
 

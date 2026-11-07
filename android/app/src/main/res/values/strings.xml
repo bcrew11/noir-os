@@ -2,4 +2,6 @@
     <string name="app_name">NOIR</string>
     <!-- Default NOIR server; change on first run (hold BACK for 2s on the setup screen) -->
     <string name="default_server">http://noir.local:8787/</string>
+    <string name="key_service_label">NOIR remote buttons</string>
+    <string name="key_service_description">Lets NOIR react to remote buttons you assign in NOIR (for example, a shortcut button that toggles a lamp). NOIR ignores every button you haven\'t assigned.</string>
 </resources>

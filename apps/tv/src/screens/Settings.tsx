@@ -1,7 +1,7 @@
 import { AnimatePresence } from 'motion/react';
 import {
   Activity, Clock, Cpu, Download, Grid2x2, Image, LifeBuoy, Link2, Monitor, MountainSnow, Music2, Palette, Power, RefreshCw, RotateCcw, Search, Smartphone,
-  Lightbulb, Sparkles, Trash2, Tv, Wifi,
+  Gamepad2, Lightbulb, Sparkles, Trash2, Tv, Wifi,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ACCENTS, AMBIENT_THEMES, BACKGROUNDS, findApp, type AccentId, type NoirState } from '@noir/core';
@@ -10,6 +10,7 @@ import { Dialog } from '../components/Dialog.tsx';
 import { Background } from '../components/Background.tsx';
 import { PickerHost, PickerValue, openPicker, type Choice } from '../components/Picker.tsx';
 import { SmartHomeSettings } from '../components/SmartHome.tsx';
+import { RemoteButtonsSettings } from '../components/RemoteButtons.tsx';
 import { Keyboard } from '../components/Keyboard.tsx';
 import { FButton, FRow, Pill, Toggle, cx } from '../components/primitives.tsx';
 import { useFocusable } from '../focus/focus.ts';
@@ -26,6 +27,7 @@ const SECTIONS = [
   { id: 'music', label: 'Music', icon: Music2 },
   { id: 'ambient', label: 'Ambient', icon: MountainSnow },
   { id: 'smart', label: 'Smart Home', icon: Lightbulb },
+  { id: 'remote', label: 'Remote Buttons', icon: Gamepad2 },
   { id: 'system', label: 'System', icon: Cpu },
 ] as const;
 
@@ -459,6 +461,7 @@ export default function Settings() {
         {section === 'music' && <MusicSection s={state} />}
         {section === 'ambient' && <AmbientSection s={state} />}
         {section === 'smart' && <SmartHomeSettings />}
+        {section === 'remote' && <RemoteButtonsSettings />}
         {section === 'system' && <SystemSection s={state} />}
       </section>
       <PickerHost />

@@ -17,6 +17,12 @@ export interface AndroidBridge {
   goveeHasKey?(): boolean;
   goveeSetKey?(key: string): void;
   goveeRequest?(callbackId: string, method: string, path: string, body: string | null): void;
+  keyServiceEnabled?(): boolean;
+  openAccessibilitySettings?(): boolean;
+  learnKey?(callbackId: string): void;
+  cancelLearnKey?(): void;
+  keyMappings?(): string;
+  setKeyMapping?(keyCode: number, actionJson: string | null): boolean;
   checkForUpdate?(): void;
   installUpdate?(): void;
 }
@@ -64,4 +70,26 @@ export interface NowPlaying {
   positionMs?: number;
   app?: string;
   art?: string | null;
+}
+
+/* Async results from native code arrive as window.__noirNative(callbackId, a, b). */
+const waiters = new Map<string, (a: unknown, b: unknown) => void>();
+(globalThis as { __noirNative?: (id: string, a: unknown, b: unknown) => void }).__noirNative = (id, a, b) => {
+  const w = waiters.get(id);
+  waiters.delete(id);
+  w?.(a, b);
+};
+let nativeSeq = 0;
+export function nativeCallbackId(prefix: string) {
+  return `${prefix}${++nativeSeq}`;
+}
+/** Wait for a native callback; rejects after `timeoutMs` (0 = never). */
+export function awaitNative(id: string, timeoutMs: number): Promise<[unknown, unknown]> {
+  return new Promise((resolve, reject) => {
+    const timer = timeoutMs ? setTimeout(() => { waiters.delete(id); reject(new Error('timeout')); }, timeoutMs) : undefined;
+    waiters.set(id, (a, b) => { clearTimeout(timer); resolve([a, b]); });
+  });
+}
+export function cancelNative(id: string) {
+  waiters.delete(id);
 }

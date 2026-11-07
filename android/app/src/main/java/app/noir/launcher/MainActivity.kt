@@ -243,6 +243,35 @@ class MainActivity : Activity() {
         } catch (e: Exception) { false }
 
         @JavascriptInterface
+        fun keyServiceEnabled(): Boolean = NoirKeyService.isEnabled(this@MainActivity)
+
+        @JavascriptInterface
+        fun openAccessibilitySettings(): Boolean = try {
+            runOnUiThread { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }; true
+        } catch (e: Exception) { false }
+
+        /** Async: the next non-navigation button press arrives via window.__noirNative(callbackId, keyCode, name). */
+        @JavascriptInterface
+        fun learnKey(callbackId: String) {
+            NoirKeyService.learn = { code, name ->
+                web.evaluateJavascript("window.__noirNative && window.__noirNative(${JSONObject.quote(callbackId)}, $code, ${JSONObject.quote(name)})", null)
+            }
+        }
+
+        @JavascriptInterface
+        fun cancelLearnKey() { NoirKeyService.learn = null }
+
+        @JavascriptInterface
+        fun keyMappings(): String = NoirKeyService.mappings(this@MainActivity).toString()
+
+        @JavascriptInterface
+        fun setKeyMapping(keyCode: Int, actionJson: String?): Boolean {
+            if (keyCode in NoirKeyService.PROTECTED) return false
+            NoirKeyService.setMapping(this@MainActivity, keyCode, actionJson)
+            return true
+        }
+
+        @JavascriptInterface
         fun goveeHasKey(): Boolean = Govee.hasKey(this@MainActivity)
 
         @JavascriptInterface
