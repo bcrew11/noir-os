@@ -117,7 +117,7 @@ export function openSavedWith(item: SavedItem, step: IntentStep): CommandResult 
 /** Open in the service's own app when it's installed, else whatever app handles the link. */
 export function openSaved(item: SavedItem): CommandResult {
   const bridge = androidBridge();
-  if (!bridge?.openUrl) return { status: 'unsupported', message: 'Opening links works on the NOIR Google TV launcher.' };
+  if (!bridge?.openUrl && !bridge?.openIntents) return { status: 'unsupported', message: 'Opening links works on the NOIR Google TV launcher.' };
   const app = item.appId ? findApp(item.appId, useNoir.getState().state?.customApps) : undefined;
   const pkg = app ? androidPackageFor(app) : null;
   if (app && !pkg) {
@@ -126,6 +126,6 @@ export function openSaved(item: SavedItem): CommandResult {
   }
   const r = JSON.parse(bridge.openIntents
     ? bridge.openIntents(JSON.stringify(openSteps(item.url, item.appId, pkg)))
-    : bridge.openUrl(item.url, pkg)) as { ok: boolean; message: string };
+    : bridge.openUrl!(item.url, pkg)) as { ok: boolean; message: string };
   return r.ok ? { status: 'verified', message: `Opening in ${app?.name ?? 'the browser'}` } : { status: 'failed', message: r.message };
 }

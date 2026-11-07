@@ -110,6 +110,9 @@ export function installInput(): () => void {
     if (!longFired) dispatchNav('ok');
   };
   const onPointer = () => markActivity();
+  // The Android launcher reports OK itself (tap vs. hold), so held buttons don't repeat-fire.
+  const w = window as unknown as { __noirOk?: (long: boolean) => void };
+  w.__noirOk = (long) => dispatchNav('ok', { long: long && hasLongSelect() });
 
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
@@ -120,5 +123,6 @@ export function installInput(): () => void {
     window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('pointermove', onPointer);
     offRemote();
+    delete w.__noirOk;
   };
 }

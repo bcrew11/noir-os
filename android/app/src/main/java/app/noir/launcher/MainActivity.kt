@@ -188,7 +188,24 @@ class MainActivity : Activity() {
         web.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Home'}))", null)
     }
 
+    private var okLongSent = false
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // OK / Enter: decided here, not by the WebView, which turns a held button into a stream of
+        // separate presses. A tap sends one "ok" on release; holding ≥ 550 ms sends one long press.
+        if (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (event.repeatCount == 0) okLongSent = false
+                    else if (!okLongSent && event.eventTime - event.downTime >= 550) {
+                        okLongSent = true
+                        web.evaluateJavascript("window.__noirOk && window.__noirOk(true)", null)
+                    }
+                }
+                KeyEvent.ACTION_UP -> if (!okLongSent && !event.isCanceled) web.evaluateJavascript("window.__noirOk && window.__noirOk(false)", null)
+            }
+            return true
+        }
         // Long-press BACK opens the (optional) server dialog; BACK never exits the launcher.
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_DOWN) {
