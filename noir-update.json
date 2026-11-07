@@ -1,8 +1,8 @@
 {
-  "versionCode": 11,
-  "versionName": "0.5.0",
-  "sha256": "838039b31a3a83eba43850896592a6ed780922a199bfb9c43fd896db45fc847f",
-  "notes": "Boot animation, NOIR screensaver, Now Playing view on Home, navigation sounds, lamp button fixes.",
-  "publishedAt": "2026-11-07T02:06:39.077Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.0.apk"
+  "versionCode": 12,
+  "versionName": "0.5.1",
+  "sha256": "715ff265bfa4deca9f820fbb68dd33853451bc080a9666b3ce8bd1ac457f798a",
+  "notes": "New keyboard-style navigation sounds: Thock, Tactile and Creamy (Settings → Appearance → Navigation sounds).",
+  "publishedAt": "2026-11-07T02:13:10.362Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.1.apk"
 }
