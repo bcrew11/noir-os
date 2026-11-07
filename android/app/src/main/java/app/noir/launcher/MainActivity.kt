@@ -77,7 +77,11 @@ class MainActivity : Activity() {
                 }
             }
         }
-        setContentView(web)
+        val root = android.widget.FrameLayout(this)
+        root.addView(web, android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT))
+        setContentView(root)
+        // The start-up intro (native video) plays over the page while it loads; the page then skips its own.
+        introShown = intro.show(root)
         NoirBus.attach(this)
         startPhoneServer()
         Updater.check()
@@ -87,7 +91,10 @@ class MainActivity : Activity() {
         load()
     }
 
-    private fun load() = web.loadUrl(serverUrl() ?: bundledUrl)
+    private val intro by lazy { IntroPlayer(this, prefs) }
+    private var introShown = false
+
+    private fun load() = web.loadUrl((serverUrl() ?: bundledUrl).let { if (introShown) it + (if ('?' in it) "&" else "?") + "noboot=1" else it })
 
     private fun askServer() {
         val input = EditText(this).apply {
@@ -112,6 +119,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         phoneServer?.stop()
         phoneServer = null
+        intro.release()
         sounds.release()
         NoirBus.detach(this)
         super.onDestroy()
@@ -191,6 +199,11 @@ class MainActivity : Activity() {
     private var okLongSent = false
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Any button skips the intro (and isn't passed on to the page).
+        if (intro.isShowing) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) intro.leave(skip = true)
+            return true
+        }
         // OK / Enter: decided here, not by the WebView, which turns a held button into a stream of
         // separate presses. A tap sends one "ok" on release; holding ≥ 550 ms sends one long press.
         if (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
@@ -276,6 +289,23 @@ class MainActivity : Activity() {
             am.dispatchMediaKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_UP, code, 0))
         }
 
+        /**
+         * Resume a media app that was closed: a Play media-button broadcast sent straight to that app
+         * (it starts its own playback service in the background, without opening the app). Returns
+         * false if the app has no media-button receiver.
+         */
+        @JavascriptInterface
+        fun wakeMediaApp(pkg: String): Boolean {
+            val probe = Intent(Intent.ACTION_MEDIA_BUTTON).setPackage(pkg)
+            if (packageManager.queryBroadcastReceivers(probe, 0).isEmpty()) return false
+            val t = SystemClock.uptimeMillis()
+            for (action in listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
+                sendBroadcast(Intent(Intent.ACTION_MEDIA_BUTTON).setPackage(pkg)
+                    .putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(t, t, action, KeyEvent.KEYCODE_MEDIA_PLAY, 0)))
+            }
+            return true
+        }
+
         /** What's playing, from the active media session. Needs notification access (see MediaListener). */
         @JavascriptInterface
         fun nowPlaying(): String = NowPlayingReader.read(this@MainActivity)
@@ -292,6 +322,12 @@ class MainActivity : Activity() {
         fun phoneUrl(): String? = if (phoneServer == null) null else lanAddress()?.let { "http://$it:$phonePort/phone/" }
 
         /** The start-up sound (pre-rendered, bundled with the page), played natively so autoplay rules don't apply. */
+        /** The page mirrors the settings the native intro needs (read at the next launch, before the page loads). */
+        @JavascriptInterface
+        fun setIntroPrefs(motion: String, sound: Boolean, volume: Float) {
+            prefs.edit().putString("intro.motion", motion).putBoolean("intro.sound", sound).putFloat("intro.volume", volume).apply()
+        }
+
         @JavascriptInterface
         fun playBootSound(volume: Float) {
             runOnUiThread {

@@ -12,25 +12,6 @@ const SPARKS = Array.from({ length: 14 }, (_, i) => ({
   size: 0.35 + ((i * 3) % 4) * 0.12,
 }));
 
-/** A small tile of soft noise (made once): dithers the big dark gradients so they don't band. */
-let grainUrl: string | null = null;
-function grain(): string {
-  if (grainUrl) return grainUrl;
-  try {
-    const c = document.createElement('canvas');
-    c.width = c.height = 128;
-    const g = c.getContext('2d')!;
-    const img = g.createImageData(128, 128);
-    for (let i = 0; i < img.data.length; i += 4) {
-      const v = Math.random() * 255;
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255;
-    }
-    g.putImageData(img, 0, 0);
-    grainUrl = `url("${c.toDataURL()}")`;
-  } catch { grainUrl = 'none'; }
-  return grainUrl;
-}
-
 /**
  * Start-up sequence (~6.5 s), played once per launch on top of the already-rendered Home screen.
  * Told as a small story: sparks gather into a point of light → it ignites into the NOIR mark with a
@@ -38,7 +19,7 @@ function grain(): string {
  * intro lifts away. Pure CSS keyframes on transform/opacity, so it stays smooth on a streaming
  * stick. Any button skips it. Reduced motion gets a short, calm fade instead.
  */
-export function BootIntro({ level, onReveal, onDone }: { level: MotionLevel; onReveal?: () => void; onDone: () => void }) {
+export function BootIntro({ level, onReveal, onDone, capture = false }: { level: MotionLevel; onReveal?: () => void; onDone: () => void; capture?: boolean }) {
   const [leaving, setLeaving] = useState(false);
   const full = level === 'full';
   const total = full ? 6200 : 900;
@@ -48,7 +29,7 @@ export function BootIntro({ level, onReveal, onDone }: { level: MotionLevel; onR
   // Start-up sound with the full animation (native on the stick; a plain <audio> elsewhere, which a
   // browser may block until the page has been interacted with — that's fine).
   useEffect(() => {
-    if (!full || !sound || sound.boot === false || sound.style === 'off') return;
+    if (capture || !full || !sound || sound.boot === false || sound.style === 'off') return;
     const volume = Math.min(1, sound.volume * 1.1);
     const bridge = androidBridge();
     if (bridge?.playBootSound) { bridge.playBootSound(volume); return; }
@@ -69,6 +50,7 @@ export function BootIntro({ level, onReveal, onDone }: { level: MotionLevel; onR
   }, []);
 
   useEffect(() => {
+    if (capture) return; // frames are stepped by scripts/render-boot-video.mjs
     // Let Home paint a moment before the intro lifts away, so the reveal itself doesn't hitch.
     const reveal = setTimeout(() => onReveal?.(), Math.max(0, total - 700));
     const leave = setTimeout(() => setLeaving(true), total);
@@ -76,10 +58,10 @@ export function BootIntro({ level, onReveal, onDone }: { level: MotionLevel; onR
     // A press during the intro skips it (and isn't passed on to Home).
     const off = interceptNav(() => { onReveal?.(); setLeaving(true); setTimeout(onDone, 300); return true; });
     return () => { clearTimeout(reveal); clearTimeout(leave); clearTimeout(done); off(); };
-  }, [total, onDone, onReveal]);
+  }, [total, onDone, onReveal, capture]);
 
   return (
-    <div className={`boot ${full ? '' : 'boot-reduced'} ${leaving ? 'boot-leave' : ''}`} aria-hidden style={{ '--grain': grain() } as React.CSSProperties}>
+    <div className={`boot ${full ? '' : 'boot-reduced'} ${leaving ? 'boot-leave' : ''}`} aria-hidden>
       <div className="boot-glow" />
       {full && (
         <>
@@ -116,7 +98,6 @@ export function BootIntro({ level, onReveal, onDone }: { level: MotionLevel; onR
           <span className="boot-sweep" aria-hidden>NOIR</span>
         </div>
       </div>
-      {full && <div className="boot-grain" />}
     </div>
   );
 }

@@ -9,7 +9,8 @@ import {
   EMPTY_MUSIC, NOIR_VERSION, NO_TV_CAPABILITIES, applySettingsPatch, defaultSettings, failed, loadSettings,
   APP_CATALOG, type AppDefinition, type Command, type CommandResult, type MusicState, type NoirState, type Settings,
 } from '@noir/core';
-import { setLocalBackend, useNoir } from '@noir/ui';
+import { pushToast, setLocalBackend, useNoir } from '@noir/ui';
+import { askConfirm } from './store/confirm.ts';
 import { androidBridge, installedApps, packageCache, type NowPlaying } from './lib/android.ts';
 import { allApps, launchApp } from './lib/apps.ts';
 import { loadSaved } from './lib/saved.ts';
@@ -94,7 +95,54 @@ function musicFrom(np: NowPlaying | null): MusicState {
 }
 
 function readNowPlaying(): NowPlaying | null {
-  try { return JSON.parse(androidBridge()?.nowPlaying() ?? 'null') as NowPlaying | null; } catch { return null; }
+  try {
+    const np = JSON.parse(androidBridge()?.nowPlaying() ?? 'null') as NowPlaying | null;
+    if (np?.pkg) rememberMediaApp(np.pkg, np.app);
+    return np;
+  } catch { return null; }
+}
+
+/* The last media app that was playing, so it can be woken up if it was closed. */
+const LAST_APP_KEY = 'noir.lastMediaApp';
+let lastPkg = '';
+function rememberMediaApp(pkg: string, label?: string) {
+  if (pkg === lastPkg) return;
+  lastPkg = pkg;
+  try { localStorage.setItem(LAST_APP_KEY, JSON.stringify({ pkg, label: label ?? pkg })); } catch { /* storage unavailable */ }
+}
+function lastMediaApp(): { pkg: string; label: string } | null {
+  try { return JSON.parse(localStorage.getItem(LAST_APP_KEY) ?? 'null') as { pkg: string; label: string } | null; } catch { return null; }
+}
+
+/**
+ * After Resume: if nothing is playing a few seconds later (usually because the music app was
+ * closed), wake that app in the background with a Play media button; if it still isn't playing,
+ * offer to open it with one click.
+ */
+let resumeWatch: ReturnType<typeof setTimeout> | undefined;
+function watchResume() {
+  clearTimeout(resumeWatch);
+  const playing = () => !!readNowPlaying()?.playing;
+  resumeWatch = setTimeout(() => {
+    if (playing()) return;
+    const app = lastMediaApp();
+    const bridge = androidBridge();
+    const woke = !!(app && bridge?.wakeMediaApp?.(app.pkg));
+    resumeWatch = setTimeout(() => {
+      if (playing()) { if (woke) pushToast({ tone: 'success', title: `Resumed in ${app!.label}` }); return; }
+      if (!app || !bridge) return;
+      askConfirm({
+        title: `${app.label} isn’t responding`,
+        body: `It may have been closed. Open ${app.label} to keep listening?`,
+        confirmLabel: `Open ${app.label}`,
+        onConfirm: () => {
+          bridge.launch(app.pkg);
+          // Once it's open, ask it to pick up where it left off.
+          setTimeout(() => { if (!playing()) bridge.wakeMediaApp?.(app.pkg); }, 3500);
+        },
+      });
+    }, 4000);
+  }, 3500);
 }
 
 export function startStandalone() {
@@ -135,8 +183,10 @@ export function startStandalone() {
           return (await launchApp(app, { quiet: true })) ?? failed('Couldn’t open the app.');
         }
         case 'music.playpause': case 'music.next': case 'music.previous': {
+          const resuming = cmd.type === 'music.playpause' && !readNowPlaying()?.playing;
           bridge?.mediaKey(cmd.type.slice(6));
           setTimeout(publish, 400);
+          if (resuming) watchResume();
           return { status: 'sent', message: 'Sent to the media app' };
         }
         default:

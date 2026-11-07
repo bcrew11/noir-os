@@ -137,6 +137,7 @@ object NowPlayingReader {
                 .put("durationMs", meta.getLong(MediaMetadata.METADATA_KEY_DURATION))
                 .put("positionMs", pos)
                 .put("app", appLabel)
+                .put("pkg", c.packageName)
                 .put("art", artUrl ?: JSONObject.NULL)
                 .toString()
     }

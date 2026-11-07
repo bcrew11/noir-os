@@ -14,6 +14,8 @@ export interface AndroidBridge {
   soundLoad?(key: string, wavBase64: string): void;
   soundPlay?(key: string, volume: number): boolean;
   playBootSound?(volume: number): void;
+  setIntroPrefs?(motion: string, sound: boolean, volume: number): void;
+  wakeMediaApp?(pkg: string): boolean;
   nowPlaying(): string;
   openNotificationAccess(): boolean;
   openSystemSettings(): void;
@@ -77,6 +79,8 @@ export interface NowPlaying {
   durationMs?: number;
   positionMs?: number;
   app?: string;
+  /** Package of the media app (to wake it if it was closed). */
+  pkg?: string;
   art?: string | null;
 }
 

@@ -5,10 +5,12 @@ import { allApps, launchApp } from './lib/apps.ts';
 import { Background } from './components/Background.tsx';
 import { Header, NavBar, NoirMark, Toasts } from './components/chrome.tsx';
 import { PhonePairingOverlay } from './components/PhonePairingOverlay.tsx';
+import { ConfirmHost } from './components/ConfirmHost.tsx';
 import { RemoteSimulator } from './components/RemoteSimulator.tsx';
 import { FpsMeter } from './components/FpsMeter.tsx';
 import { BootIntro } from './components/BootIntro.tsx';
 import { configureSound } from './lib/sound.ts';
+import { androidBridge } from './lib/android.ts';
 import { installInput, setInputExtras } from './focus/input.ts';
 import { screenTransition, useMotion } from './hooks/useMotion.ts';
 import { usePerformanceProbe } from './hooks/usePerformance.ts';
@@ -59,6 +61,13 @@ export function App() {
 
   const snd = state?.settings.sound;
   useEffect(() => { if (snd) configureSound(snd.style, snd.volume); }, [snd]);
+  // The Android launcher plays the intro natively before this page loads: mirror its settings there.
+  // It's a video, so a stick's automatic "reduced" animation level doesn't apply; only Animation: Off skips it.
+  const motionSetting = state?.settings.appearance.motion;
+  useEffect(() => {
+    if (!snd || !motionSetting) return;
+    try { androidBridge()?.setIntroPrefs?.(motionSetting === 'off' ? 'off' : 'full', snd.boot !== false && snd.style !== 'off', Math.min(1, snd.volume * 1.1)); } catch { /* older launcher */ }
+  }, [snd, motionSetting]);
 
   const a = state?.settings.appearance;
   useEffect(() => {
@@ -114,6 +123,7 @@ export function App() {
         )}
       </AnimatePresence>
       <PhonePairingOverlay />
+      <ConfirmHost />
       {sim && <RemoteSimulator />}
       {state.settings.appearance.showFps && <FpsMeter />}
       {booting && motionLevel !== 'off' && <BootIntro level={motionLevel} onReveal={revealHome} onDone={endBoot} />}
