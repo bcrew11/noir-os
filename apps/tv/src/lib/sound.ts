@@ -18,6 +18,7 @@ export const SOUND_STYLES = {
   hud: 'HUD',
   holo: 'Hologram',
   scan: 'Scanner',
+  cosmic: 'Cosmic',
 } as const;
 export type SoundStyle = keyof typeof SOUND_STYLES;
 export type SoundKind = 'move' | 'select' | 'back';
@@ -35,6 +36,7 @@ export const SOUND_HINTS: Record<SoundStyle, string> = {
   hud: 'Smooth, glassy tones that glide upward — a heads-up display at work.',
   holo: 'A soft shimmering tone with a breath of air — a hologram coming to life.',
   scan: 'A rounded synth swell that brightens as it plays — data rolling past.',
+  cosmic: 'Retro space synth — warm bloops, a faint laser glint and a little sparkle.',
 };
 
 type Ctx = BaseAudioContext;
@@ -153,8 +155,30 @@ function swell(ctx: Ctx, out: AudioNode, wet: AudioNode, t: number, f: number, c
   g.connect(wet);
 }
 
+/**
+ * A retro synth "bloop": a square wave through a resonant low-pass that closes as the note plays
+ * (bright → dark gives the "bwop" vowel), with the pitch bending from `from` to `to`.
+ */
+function bloop(ctx: Ctx, out: AudioNode, wet: AudioNode, t: number, from: number, to: number, peak: number, decay: number, cut: [number, number] = [2600, 650]) {
+  const o = ctx.createOscillator();
+  o.type = 'square';
+  o.frequency.setValueAtTime(from, t);
+  o.frequency.exponentialRampToValueAtTime(to, t + decay * 0.7);
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.Q.value = 6;
+  lp.frequency.setValueAtTime(cut[0], t);
+  lp.frequency.exponentialRampToValueAtTime(cut[1], t + decay * 0.8);
+  const soft = ctx.createBiquadFilter(); // keep the square's top end from getting buzzy
+  soft.type = 'lowpass'; soft.frequency.value = 3200; soft.Q.value = 0.5;
+  const g = ctx.createGain();
+  env(ctx, g, t, peak, 0.006, decay);
+  o.connect(lp).connect(soft).connect(g);
+  g.connect(out); g.connect(wet);
+  o.start(t); o.stop(t + decay + 0.03);
+}
+
 /** Per-style level trim so every style sounds about equally loud (measured peaks, ~0.3). */
-const STYLE_TRIM: Record<SoundStyle, number> = { off: 0, thock: 0.47, tactile: 0.62, creamy: 0.83, tick: 1.75, glass: 3, wood: 1.1, bubble: 1.5, felt: 0.95, hud: 1.05, holo: 1.2, scan: 0.6 };
+const STYLE_TRIM: Record<SoundStyle, number> = { off: 0, thock: 0.47, tactile: 0.62, creamy: 0.83, tick: 1.75, glass: 3, wood: 1.1, bubble: 1.5, felt: 0.95, hud: 1.05, holo: 1.2, scan: 0.6, cosmic: 0.8 };
 
 /** Schedule one sound on any (online or offline) audio context. */
 export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: SoundKind, t = ctx.currentTime) {
@@ -261,6 +285,24 @@ export function renderSound(ctx: Ctx, dest: AudioNode, style: SoundStyle, kind: 
       const [f, cutFrom, cutTo, d] = ([[523, 700, 2600, 0.1], [440, 600, 3400, 0.16], [587, 2600, 600, 0.13]] as const)[k]!;
       swell(ctx, out, wet, t, f, cutFrom, cutTo, [0.2, 0.22, 0.2][k]!, d);
       if (k === 1) smooth(ctx, out, wet, t + 0.07, 1318, 1318, 0.07, 0.012, 0.14);
+      break;
+    }
+    /*
+     * Cosmic: retro space synth. Every press is a warm filtered bloop; moves carry a faint laser
+     * glint sweeping down above it, select bends up and twinkles, back bends down into a "blorp".
+     */
+    case 'cosmic': {
+      const wet = echo(ctx, out, 0.07, 0.15, 0.18);
+      if (k === 0) {
+        bloop(ctx, out, wet, t, 560, 500, 0.2, 0.09);
+        smooth(ctx, out, wet, t + 0.004, 2600, 1700, 0.022, 0.006, 0.07);
+      }
+      if (k === 1) {
+        bloop(ctx, out, wet, t, 420, 640, 0.2, 0.12, [1400, 2400]);
+        smooth(ctx, out, wet, t + 0.06, 2093, 2093, 0.03, 0.008, 0.12, { vibrato: 14, depth: 25 });
+        smooth(ctx, out, wet, t + 0.09, 3136, 3136, 0.02, 0.008, 0.14, { vibrato: 14, depth: 35 });
+      }
+      if (k === 2) bloop(ctx, out, wet, t, 600, 340, 0.21, 0.13, [2200, 450]);
       break;
     }
     case 'off':
