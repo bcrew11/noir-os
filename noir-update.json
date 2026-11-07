@@ -1,8 +1,8 @@
 {
-  "versionCode": 7,
-  "versionName": "0.3.4",
-  "sha256": "b5bd59adfc57eea4aed7ea45cc30d0a0dd9c22be41ee2811ef1932bfcaad4341",
-  "notes": "Fixes the music widget highlight; smoother navigation.",
-  "publishedAt": "2026-11-07T00:01:55.883Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.3.4.apk"
+  "versionCode": 8,
+  "versionName": "0.4.0",
+  "sha256": "fbd5e11ee64348ed189719a5440b4b822cec29b1e9eb5aaf306e2041d7ef58db",
+  "notes": "Govee lights on Home; settings pickers; clearer nav bar; Spotify shortcut on Music; smoother scrolling and Home button jumps to the nav bar.",
+  "publishedAt": "2026-11-07T00:27:57.256Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.4.0.apk"
 }
