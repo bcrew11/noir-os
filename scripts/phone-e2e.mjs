@@ -187,6 +187,21 @@ try {
   await phone.getByText('Waiting to sync').waitFor({ state: 'detached', timeout: 6000 }).then(() => check(true, 'queued link synced'), () => check(false, 'queued link synced'));
   const tvSaved2 = await tv.evaluate(() => JSON.parse(localStorage.getItem('noir.saved') ?? '[]'));
   check(tvSaved2.length === 2 && tvSaved2[0].appId === 'netflix', 'TV has the Netflix link on top');
+  // iPhone Shortcut: create a key from the phone, then POST a queued file the way Shortcuts will.
+  await phone.getByRole('button', { name: /Save from anywhere/ }).click();
+  await phone.getByRole('button', { name: 'Create Shortcut key' }).click();
+  const authHeader = (await phone.getByText(/^Bearer /).textContent()).trim();
+  const endpoint = (await phone.getByText(/\/api\/saved$/).textContent()).trim();
+  check(endpoint.endsWith('/api/saved') && authHeader.length > 30, 'Shortcut key and address shown');
+  const queueFile = 'https://www.youtube.com/watch?v=aaaaaaaaaaa\nhttps://www.hulu.com/series/abc\n';
+  const sc = await fetch(`http://127.0.0.1:${PORT}/api/saved`, { method: 'POST', headers: { Authorization: authHeader, 'Content-Type': 'application/json' }, body: JSON.stringify({ text: queueFile }) });
+  const scBody = await sc.json();
+  check(sc.status === 200 && scBody.added === 2, `Shortcut-style batch accepted (${sc.status} ${JSON.stringify(scBody)})`);
+  const tvSaved3 = await tv.evaluate(() => JSON.parse(localStorage.getItem('noir.saved') ?? '[]'));
+  check(tvSaved3.length === 4 && tvSaved3[0].appId === 'hulu' && tvSaved3[1].appId === 'youtube', 'batch order: most recently saved (last line) on top');
+  const scBad = await fetch(`http://127.0.0.1:${PORT}/api/saved`, { method: 'POST', headers: { Authorization: 'Bearer wrong' }, body: JSON.stringify({ text: queueFile }) });
+  check(scBad.status === 401, 'Shortcut with a wrong key is refused');
+
   if (process.env.SHOTDIR) {
     const D = process.env.SHOTDIR;
     await phone.screenshot({ path: `${D}/phone-saved.png` });

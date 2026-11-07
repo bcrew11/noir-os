@@ -8,7 +8,7 @@
  *     for a random token. Only a SHA-256 hash of each token is stored (localStorage).
  *   - every other request and socket must present a valid token.
  */
-import { extractUrl, CommandSchema, NAV_KEYS, type NavKey, type NoirState, type PairedPhone } from '@noir/core';
+import { extractUrls, CommandSchema, NAV_KEYS, type NavKey, type NoirState, type PairedPhone } from '@noir/core';
 import { command, emitRemoteNav, patchSettings, useNoir } from '@noir/ui';
 import { androidBridge } from './lib/android.ts';
 import { getPower, goveeHasKey, setPower } from './lib/govee.ts';
@@ -152,9 +152,13 @@ async function handle(method: string, path: string, auth: string, body: string):
   }
   if (p === '/api/saved' && method === 'GET') return [200, loadSaved()];
   if (p === '/api/saved' && method === 'POST') {
-    const url = extractUrl(String(json().url ?? ''));
-    if (!url) return err(400, 'That doesn’t look like a link.');
-    return [200, addSaved(url)];
+    // `url` (phone app) or `text` with any number of links (the iPhone Shortcut's queue).
+    const b = json();
+    const urls = extractUrls(`${String(b.url ?? '')}\n${String(b.text ?? '')}`);
+    if (!urls.length) return err(400, 'That doesn’t look like a link.');
+    // The queue file is oldest-first; adding in order leaves the most recently saved link on top.
+    const items = urls.map((u) => addSaved(u));
+    return [200, b.url && urls.length === 1 ? items[0] : { added: items.length }];
   }
   const sv = p.match(/^\/api\/saved\/([^/]+)(\/open)?$/);
   if (sv) {
@@ -177,6 +181,16 @@ async function handle(method: string, path: string, auth: string, body: string):
     }
   }
   if (p === '/api/phones' && method === 'GET') return [200, pairedPhones()];
+  // A key for something that can't do the pairing dance itself (the iPhone Shortcut), issued to an
+  // already-paired phone. It shows up under paired devices and can be removed like any phone.
+  if (p === '/api/phones/key' && method === 'POST') {
+    const name = String(json().name ?? 'iPhone Shortcut').trim().slice(0, 40) || 'iPhone Shortcut';
+    const token = randomToken();
+    const phone: StoredPhone = { id: crypto.randomUUID(), name, createdAt: Date.now(), lastSeenAt: Date.now(), hash: await sha256(token) };
+    savePhones([...loadPhones(), phone]);
+    refreshPhonesInState();
+    return [200, { token, name }];
+  }
   const del = p.match(/^\/api\/phones\/([^/]+)$/);
   if (del && method === 'DELETE') { removePhone(decodeURIComponent(del[1]!)); return [200, { ok: true }]; }
 

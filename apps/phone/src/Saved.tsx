@@ -2,6 +2,7 @@ import { Bookmark, CloudOff, Loader2, Play, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { extractUrl, findApp, serviceForUrl, type SavedItem } from '@noir/core';
 import { api, pushToast, useNoir } from '@noir/ui';
+import { ShortcutSetup } from './ShortcutSetup.tsx';
 import { Btn, Card, Section, haptic } from './ui.tsx';
 
 /**
@@ -102,6 +103,8 @@ export function Saved() {
           {busy === 'add' ? <Loader2 className="size-5 animate-spin" /> : <Plus className="size-5" />}Save for later
         </Btn>
       </Card>
+
+      <ShortcutSetup />
 
       {queue.length > 0 && (
         <Section title="Waiting to sync">

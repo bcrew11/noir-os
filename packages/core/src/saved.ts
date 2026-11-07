@@ -45,6 +45,16 @@ export function extractUrl(text: string): string | null {
   try { return new URL(m[0].replace(/[).,;!?]+$/, '')).toString(); } catch { return null; }
 }
 
+/** Every distinct http(s) link in a block of text (the Shortcut sends its whole queue at once). */
+export function extractUrls(text: string): string[] {
+  const out = new Set<string>();
+  for (const m of text.matchAll(/https?:\/\/[^\s<>"']+/gi)) {
+    const u = extractUrl(m[0]);
+    if (u) out.add(u);
+  }
+  return [...out];
+}
+
 /** The YouTube video id for a watch/shorts/youtu.be link, for a reliable thumbnail and title. */
 export function youTubeId(url: string): string | null {
   try {
