@@ -14,7 +14,8 @@ import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
 
 const FPS = 60;
-const SECONDS = 7.0;           // the sound's length; the launcher starts fading the video out at ~6.2 s
+const SECONDS = 7.0;           // the sound's length
+const FADE = 0.8;              // the picture fades out over the last 0.8 s
 const root = new URL('..', import.meta.url).pathname;
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'noir-intro-'));
 const wav = path.join(tmp, 'boot.wav');
@@ -46,7 +47,9 @@ execFileSync('ffmpeg', [
   '-v', 'error', '-y',
   '-framerate', String(FPS), '-i', path.join(tmp, 'f%04d.png'),
   '-i', wav,
-  '-vf', 'scale=1920:1080:flags=lanczos,noise=alls=2:allf=t,format=yuv420p',
+  // Ends by fading to the page's background colour (#07060C): the launcher then swaps to the page,
+  // which fades Home in from that same colour, so there's no freeze or cut at the hand-off.
+  '-vf', `scale=1920:1080:flags=lanczos,fade=t=out:st=${SECONDS - FADE}:d=${FADE}:color=0x07060C,noise=alls=2:allf=t,format=yuv420p`,
   '-c:v', 'libx264', '-profile:v', 'high', '-level', '4.2', '-preset', 'slow', '-crf', '15', '-tune', 'film',
   '-r', String(FPS), '-g', String(FPS),
   '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out,

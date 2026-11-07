@@ -4,6 +4,7 @@ import { loadFonts } from '@noir/ui';
 import { App } from './App.tsx';
 import { DreamApp } from './DreamApp.tsx';
 import { BootIntro } from './components/BootIntro.tsx';
+import { IntroCover } from './components/IntroCover.tsx';
 import './styles.css';
 import { isStandalone } from './lib/android.ts';
 import { startStandalone } from './standalone.ts';
@@ -19,6 +20,6 @@ const isBootCapture = params.get('bootcapture') === '1';
 void loadFonts();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isBootCapture ? <BootIntro level="full" onDone={() => {}} capture /> : isDream ? <DreamApp /> : <App />}
+    {isBootCapture ? <BootIntro level="full" onDone={() => {}} capture /> : isDream ? <DreamApp /> : <><App /><IntroCover /></>}
   </StrictMode>,
 );

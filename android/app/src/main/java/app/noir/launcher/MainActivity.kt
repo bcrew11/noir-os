@@ -52,11 +52,12 @@ class MainActivity : Activity() {
     private val bundledUrl = "https://appassets.androidplatform.net/assets/web/index.html"
     private fun serverUrl(): String? = prefs.getString("server", null)?.takeIf { it.isNotBlank() }
 
+    private lateinit var root: android.widget.FrameLayout
+
     @SuppressLint("SetJavaScriptEnabled")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    private fun createWebView(): WebView {
         val assets = WebViewAssetLoader.Builder().addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this)).build()
-        web = WebView(this).apply {
+        return WebView(this).apply {
             setBackgroundColor(Color.parseColor("#0B0912"))
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
@@ -75,9 +76,26 @@ class MainActivity : Activity() {
                     val url = serverUrl()
                     if (req.isForMainFrame && url != null) view.loadData(offlinePage(url), "text/html", "utf-8")
                 }
+                // Android may kill the page's renderer process to free memory (e.g. while YouTube or
+                // Netflix is open). Unhandled, that takes the whole launcher down; instead, rebuild it.
+                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    if (view !== web) return true
+                    root.removeView(view)
+                    view.destroy()
+                    web = createWebView()
+                    root.addView(web, 0, android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT))
+                    web.loadUrl((serverUrl() ?: bundledUrl).let { it + (if ('?' in it) "&" else "?") + "noboot=1" })
+                    web.requestFocus()
+                    return true
+                }
             }
         }
-        val root = android.widget.FrameLayout(this)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        web = createWebView()
+        root = android.widget.FrameLayout(this)
         root.addView(web, android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT))
         setContentView(root)
         // The start-up intro (native video) plays over the page while it loads; the page then skips its own.
@@ -94,7 +112,16 @@ class MainActivity : Activity() {
     private val intro by lazy { IntroPlayer(this, prefs) }
     private var introShown = false
 
-    private fun load() = web.loadUrl((serverUrl() ?: bundledUrl).let { if (introShown) it + (if ('?' in it) "&" else "?") + "noboot=1" else it })
+    // With the native intro, the page skips its own and starts under a dark cover that fades out
+    // when the intro finishes (window.__noirIntroDone), so the hand-off is a clean fade.
+    private fun load() = web.loadUrl((serverUrl() ?: bundledUrl).let { if (introShown) it + (if ('?' in it) "&" else "?") + "noboot=1&nativeintro=1" else it })
+
+    /** The intro finished (or was skipped): tell the page to fade Home in. */
+    fun introDone() {
+        introFinished = true
+        web.evaluateJavascript("window.__noirIntroDone && window.__noirIntroDone()", null)
+    }
+    @Volatile private var introFinished = false
 
     private fun askServer() {
         val input = EditText(this).apply {
@@ -201,7 +228,7 @@ class MainActivity : Activity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Any button skips the intro (and isn't passed on to the page).
         if (intro.isShowing) {
-            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) intro.leave(skip = true)
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) intro.skip()
             return true
         }
         // OK / Enter: decided here, not by the WebView, which turns a held button into a stream of
@@ -322,6 +349,10 @@ class MainActivity : Activity() {
         fun phoneUrl(): String? = if (phoneServer == null) null else lanAddress()?.let { "http://$it:$phonePort/phone/" }
 
         /** The start-up sound (pre-rendered, bundled with the page), played natively so autoplay rules don't apply. */
+        /** For a page that loads after the intro already ended. */
+        @JavascriptInterface
+        fun introFinished(): Boolean = introFinished || !introShown
+
         /** Settings → System → Restart NOIR: a full restart (fresh process), intro included. */
         @JavascriptInterface
         fun restart() = runOnUiThread { RestartActivity.restart(this@MainActivity) }
