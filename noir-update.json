@@ -1,8 +1,8 @@
 {
-  "versionCode": 18,
-  "versionName": "0.5.7",
-  "sha256": "6e38d4c1e6ce3826b7eb75f0b173fc2f1382ddb42362b13fbd1406e971ec5f86",
-  "notes": "Sharper album covers (full-size art from your music app); the light behind the cover stays and fades smoothly between songs.",
-  "publishedAt": "2026-11-07T05:29:52.416Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.7.apk"
+  "versionCode": 19,
+  "versionName": "0.5.8",
+  "sha256": "2459c63b144351b2aaa2c1c42699dfd80e4a4a49147587b16c6da70ec82d9eb0",
+  "notes": "Netflix saved shows: new way of opening the show page (plus 'Try another way' options when you hold OK); Prime Video and other items without a thumbnail show the app's artwork; the light behind the cover on the Music tab no longer flickers between songs.",
+  "publishedAt": "2026-11-07T05:48:38.929Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.8.apk"
 }
