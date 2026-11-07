@@ -50,12 +50,47 @@ export function renderBootSound(ctx: BaseAudioContext, dest: AudioNode) {
   tone.frequency.exponentialRampToValueAtTime(5200, T.bloomPeak);
   tone.frequency.exponentialRampToValueAtTime(2600, T.end);
 
+  // Body: a gentle low shelf, with the sub-sonic rumble trimmed so it stays tight, not boomy.
+  const shelf = ctx.createBiquadFilter();
+  shelf.type = 'lowshelf'; shelf.frequency.value = 160; shelf.gain.value = 3.5;
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass'; hp.frequency.value = 34; hp.Q.value = 0.7;
   const space = reverb(ctx, 2.8, 2.6);
   const wet = ctx.createGain(); wet.gain.value = 0.32;
   const dry = ctx.createGain(); dry.gain.value = 0.8;
   master.connect(tone);
-  tone.connect(dry).connect(dest);
-  tone.connect(space).connect(wet).connect(dest);
+  tone.connect(shelf).connect(hp);
+  hp.connect(dry).connect(dest);
+  hp.connect(space).connect(wet).connect(dest);
+
+  // Sub layer: warm sines on the chord's root and fifth, swelling in with the bloom.
+  const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.value = 77.78; // E♭2
+  const sub2 = ctx.createOscillator(); sub2.type = 'sine'; sub2.frequency.value = 116.54; // B♭2
+  const subG = ctx.createGain();
+  subG.gain.setValueAtTime(0.0001, 0);
+  subG.gain.setValueAtTime(0.0001, T.glideStart);
+  subG.gain.exponentialRampToValueAtTime(0.035, T.glideEnd);
+  subG.gain.exponentialRampToValueAtTime(0.045, T.bloomPeak);
+  subG.gain.setValueAtTime(0.045, T.fadeStart);
+  subG.gain.exponentialRampToValueAtTime(0.0001, T.end);
+  const sub2G = ctx.createGain(); sub2G.gain.value = 0.35;
+  sub.connect(subG); sub2.connect(sub2G).connect(subG);
+  subG.connect(hp);
+  sub.start(0); sub2.start(0); sub.stop(T.end + 0.1); sub2.stop(T.end + 0.1);
+
+  // Punch: a soft low hit as the chord locks in (and the wordmark arrives), felt more than heard.
+  const hitAt = T.glideEnd - 0.05;
+  const hit = ctx.createOscillator(); hit.type = 'sine';
+  hit.frequency.setValueAtTime(110, hitAt);
+  hit.frequency.exponentialRampToValueAtTime(77.78, hitAt + 0.12); // settles onto the root, no 808 drop
+  const hitG = ctx.createGain();
+  hitG.gain.value = 0.0001;
+  hitG.gain.setValueAtTime(0.0001, hitAt);
+  hitG.gain.exponentialRampToValueAtTime(0.11, hitAt + 0.035);
+  hitG.gain.exponentialRampToValueAtTime(0.0001, hitAt + 1.1);
+  hit.connect(hitG).connect(hp);
+  hitG.connect(space);
+  hit.start(hitAt); hit.stop(hitAt + 1.5);
 
   for (let v = 0; v < VOICES; v++) {
     const target = CHORD[v % CHORD.length]! * (1 + (r() - 0.5) * 0.004); // a hair of detune keeps it alive
@@ -75,8 +110,8 @@ export function renderBootSound(ctx: BaseAudioContext, dest: AudioNode) {
     lfo.connect(depth).connect(o.frequency);
 
     const g = ctx.createGain();
-    // Low voices a bit quieter (no rumble), each voice slightly different in level.
-    g.gain.value = (target < 120 ? 0.5 : target < 250 ? 0.8 : 1) * (0.6 + r() * 0.4) / VOICES * 2.2;
+    // Each voice slightly different in level (the low ones carry real weight).
+    g.gain.value = (target < 120 ? 0.9 : target < 250 ? 0.95 : 1) * (0.6 + r() * 0.4) / VOICES * 2.2;
     const pan = ctx.createStereoPanner();
     pan.pan.value = (r() * 2 - 1) * 0.8;
     o.connect(g).connect(pan).connect(master);
