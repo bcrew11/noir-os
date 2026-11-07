@@ -140,7 +140,14 @@ export function move(dir: Direction): boolean {
   const cur = focusedId ? nodes.get(focusedId) : undefined;
   if (!cur || cur.scope !== scope || !cur.el.isConnected) return focus(scopeMemory.get(scope) ?? firstIn(scope));
   const candidates = navigable(scope).filter((n) => n.id !== cur.id);
-  const bestId = pickBest(settledRect(cur.el), candidates.map((n) => ({ id: n.id, rect: settledRect(n.el) })), dir);
+  const from = settledRect(cur.el);
+  const toCand = (list: Node[]) => list.map((n) => ({ id: n.id, rect: settledRect(n.el) }));
+  // Stay inside the current scrolling list while it has somewhere to go (rows scrolled off the
+  // top are still "above", even if a filter bar outside the list is physically closer), and only
+  // leave the list when it has nothing further in that direction.
+  const container = scrollParent(cur.el);
+  const sameList = container ? candidates.filter((n) => container.contains(n.el)) : [];
+  const bestId = (sameList.length ? pickBest(from, toCand(sameList), dir) : null) ?? pickBest(from, toCand(candidates), dir);
   if (!bestId) return false;
   const best = nodes.get(bestId)!;
   if (best.group && best.group !== cur.group) {

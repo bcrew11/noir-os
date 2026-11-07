@@ -24,7 +24,7 @@ export function Dialog({ title, subtitle, onClose, children, width = 'w-[44rem]'
     <ScopeContext.Provider value={scope}>
       <motion.div className="absolute inset-0 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: level === 'off' ? 0 : 0.22 }}
         style={{ background: 'radial-gradient(80% 80% at 50% 50%, rgba(11,9,18,0.55), rgba(11,9,18,0.85))' }}>
-        <div className={cx('flex h-full w-full p-24', align === 'center' ? 'items-center justify-center' : 'items-stretch justify-end')}>
+        <div className={cx('flex h-full w-full px-24 py-10', align === 'center' ? 'items-center justify-center' : 'items-stretch justify-end')}>
           <motion.div
             role="dialog" aria-modal="true"
             initial={{ opacity: 0, y: align === 'center' ? 16 : 0, x: align === 'right' ? 32 : 0, scale: 0.98 }}
@@ -36,7 +36,9 @@ export function Dialog({ title, subtitle, onClose, children, width = 'w-[44rem]'
           >
             {title && <h2 className="text-[2.1rem] font-semibold tracking-tight text-fg">{title}</h2>}
             {subtitle && <p className="mt-1.5 text-[1.15rem] leading-snug text-fg-muted">{subtitle}</p>}
-            <div className={cx('scroll-hidden min-h-0 overflow-y-auto', !!title && 'mt-7')}>{children}</div>
+            {/* Padding (offset by negative margin) gives focus rings and the focused item's scale room,
+                so nothing is clipped by the scroll area; scroll-padding keeps the focused item clear of the edges. */}
+            <div className={cx('scroll-hidden -mx-4 -mb-4 min-h-0 overflow-y-auto px-4 pb-4 pt-2', !!title && 'mt-5')} style={{ scrollPadding: '1rem' }}>{children}</div>
           </motion.div>
         </div>
       </motion.div>
