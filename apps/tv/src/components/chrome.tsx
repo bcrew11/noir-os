@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Download, FlaskConical, Gamepad2, Grid2x2,
 import { formatClock, type InputIcon } from '@noir/core';
 import { useNoir, useNow } from '@noir/ui';
 import { Camera, Disc3, Laptop, Speaker, Cast } from 'lucide-react';
-import { setGroupPreferred, useFocusable } from '../focus/focus.ts';
+import { setGroupPreferred, useFocusStore, useFocusable } from '../focus/focus.ts';
 import { useMotion } from '../hooks/useMotion.ts';
 import { useUI, type Screen } from '../store/ui.ts';
 import { cx, focusLift } from './primitives.tsx';
@@ -103,35 +103,44 @@ const NAV: Array<{ id: Screen; label: string; icon: typeof Home }> = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
-function NavItem({ item, active }: { item: (typeof NAV)[number]; active: boolean }) {
+/**
+ * Nav states are deliberately distinct so it is always clear where the remote's cursor is:
+ *  - nav not focused: the bar dims; the current page shows accent text + a small dot (no glow).
+ *  - nav focused: the bar brightens with an accent outline; the focused tab is a solid light
+ *    pill with dark text; the current page (if not focused) keeps a soft tint.
+ */
+function NavItem({ item, active, navFocused }: { item: (typeof NAV)[number]; active: boolean; navFocused: boolean }) {
   const go = useUI((s) => s.go);
   const { ref, focused, pointer } = useFocusable<HTMLButtonElement>(`nav-${item.id}`, { group: 'nav', onSelect: () => go(item.id) });
   const level = useMotion();
   const Icon = item.icon;
   return (
     <button ref={ref} {...pointer} data-focused={focused || undefined} tabIndex={-1} aria-current={active ? 'page' : undefined}
-      className={cx('relative flex h-14 items-center gap-3 rounded-full px-6 text-[1.2rem] font-medium outline-none transition-colors duration-200',
-        active || focused ? 'text-fg' : 'text-fg-muted')}>
-      {active && (
-        <motion.span layoutId="nav-active" transition={level === 'full' ? { type: 'tween', duration: 0.3, ease: [0.22, 0.8, 0.24, 1] } : { duration: 0 }}
-          className="absolute inset-0 rounded-full border border-highlight/35"
-          style={{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--noir-primary) 48%, transparent), color-mix(in srgb, var(--noir-primary) 26%, transparent))', boxShadow: '0 0 1.6rem -0.2rem color-mix(in srgb, var(--noir-accent) 60%, transparent), inset 0 1px 0 rgba(255,255,255,0.15)' }} />
-      )}
-      {focused && <span className={cx('absolute inset-0 rounded-full', active ? 'focus-ring' : 'bg-white/10 focus-ring')} />}
-      <Icon className="relative size-6" strokeWidth={1.7} />
+      style={focusLift(focused, level, 1.06, 0)}
+      className={cx('relative flex h-14 items-center gap-3 rounded-full px-6 text-[1.2rem] font-medium outline-none transition-[color,background,box-shadow] duration-200',
+        focused ? 'bg-fg text-ink-900 shadow-[0_0_1.6rem_-0.2rem_var(--noir-accent)]'
+          : active ? (navFocused ? 'bg-primary/25 text-fg' : 'text-highlight')
+          : 'text-fg-muted')}>
+      <Icon className="relative size-6" strokeWidth={focused ? 2.1 : 1.7} />
       <span className="relative">{item.label}</span>
+      {active && !navFocused && <span aria-hidden className="absolute bottom-1 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-highlight" />}
     </button>
   );
 }
 
 export function NavBar() {
   const screen = useUI((s) => s.screen);
+  const navFocused = useFocusStore((s) => !!s.focusedId?.startsWith('nav-'));
   // Without TV control (Android TV launcher) the Inputs screen has nothing to do.
   const noInputs = useNoir((s) => s.state?.deployment === 'android-tv' && s.state.tv.adapter === 'none');
   useEffect(() => { const off = setGroupPreferred('nav', () => `nav-${useUI.getState().screen}`); return () => void off(); }, []);
   return (
-    <nav className="glass mx-auto flex w-max items-center gap-1 rounded-full p-2" style={{ boxShadow: '0 1.5rem 3rem -1rem rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-      {NAV.filter((n) => !(noInputs && n.id === 'inputs')).map((n) => <NavItem key={n.id} item={n} active={screen === n.id} />)}
+    <nav className={cx('glass mx-auto flex w-max items-center gap-1 rounded-full p-2 transition-[opacity,box-shadow,border-color] duration-200',
+      navFocused ? 'opacity-100 border-highlight/50' : 'opacity-70')}
+      style={{ boxShadow: navFocused
+        ? '0 1.5rem 3rem -1rem rgba(0,0,0,0.75), 0 0 0 0.12rem color-mix(in srgb, var(--noir-highlight) 55%, transparent), 0 0 2rem -0.4rem var(--noir-accent)'
+        : '0 1.5rem 3rem -1rem rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+      {NAV.filter((n) => !(noInputs && n.id === 'inputs')).map((n) => <NavItem key={n.id} item={n} active={screen === n.id} navFocused={navFocused} />)}
     </nav>
   );
 }

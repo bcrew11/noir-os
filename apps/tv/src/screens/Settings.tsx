@@ -7,6 +7,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ACCENTS, AMBIENT_THEMES, BACKGROUNDS, findApp, type AccentId, type NoirState } from '@noir/core';
 import { api, patchSettings, pushToast, useNoir } from '@noir/ui';
 import { Dialog } from '../components/Dialog.tsx';
+import { Background } from '../components/Background.tsx';
+import { PickerHost, PickerValue, openPicker, type Choice } from '../components/Picker.tsx';
 import { Keyboard } from '../components/Keyboard.tsx';
 import { FButton, FRow, Pill, Toggle, cx } from '../components/primitives.tsx';
 import { useFocusable } from '../focus/focus.ts';
@@ -25,8 +27,23 @@ const SECTIONS = [
   { id: 'system', label: 'System', icon: Cpu },
 ] as const;
 
-function cycle<T>(list: readonly T[], cur: T): T {
-  return list[(list.indexOf(cur) + 1) % list.length]!;
+/** Miniature of the Home screen in a given accent: a focused card with its glow, and the accent bar. */
+function AccentPreview({ id }: { id: AccentId }) {
+  const a = ACCENTS[id];
+  return (
+    <div className="absolute inset-0 grid place-items-center" style={{ background: 'radial-gradient(120% 90% at 85% 0%, #1d1230, #0b0912 70%)' }}>
+      <div className="h-[40%] w-[48%] rounded-xl" style={{ background: '#211b2e', boxShadow: `0 0 0 0.18rem ${a.highlight}, 0 0 1.5rem 0.2rem ${a.accent}` }} />
+      <div className="absolute bottom-[13%] h-[6%] w-[24%] rounded-full" style={{ background: `linear-gradient(90deg, ${a.primary}, ${a.highlight})` }} />
+    </div>
+  );
+}
+
+const SwatchDot = ({ id }: { id: AccentId }) => (
+  <span className="size-6 rounded-full" style={{ background: `linear-gradient(135deg, ${ACCENTS[id].primary}, ${ACCENTS[id].highlight})` }} />
+);
+
+function pickList(title: string, value: string, choices: Choice[], onPick: (v: string) => void, subtitle?: string) {
+  openPicker({ title, subtitle, value, choices, onPick, layout: 'list' });
 }
 
 function SectionItem({ s, active }: { s: (typeof SECTIONS)[number]; active: boolean }) {
@@ -58,20 +75,40 @@ function Appearance({ s }: { s: NoirState }) {
   return (
     <>
       <Group title="Color">
-        <FRow id="ap-accent" icon={Palette} title="Accent color" onSelect={() => set({ accent: cycle(accents, a.accent) })}
-          value={<span className="flex items-center gap-3">{ACCENTS[a.accent].label}<span className="size-6 rounded-full" style={{ background: `linear-gradient(135deg, ${ACCENTS[a.accent].primary}, ${ACCENTS[a.accent].highlight})` }} /></span>} />
-        <FRow id="ap-bg" icon={Image} title="Background" value={BACKGROUNDS[a.background]} onSelect={() => set({ background: cycle(Object.keys(BACKGROUNDS) as Array<keyof typeof BACKGROUNDS>, a.background) })} />
+        <FRow id="ap-accent" icon={Palette} title="Accent color"
+          value={<PickerValue><span className="flex items-center gap-3">{ACCENTS[a.accent].label}<SwatchDot id={a.accent} /></span></PickerValue>}
+          onSelect={() => openPicker({
+            title: 'Accent color', layout: 'grid', value: a.accent,
+            choices: accents.map((id) => ({ value: id, label: ACCENTS[id].label, preview: <AccentPreview id={id} /> })),
+            onPick: (v) => set({ accent: v as AccentId }),
+          })} />
+        <FRow id="ap-bg" icon={Image} title="Background" value={<PickerValue>{BACKGROUNDS[a.background]}</PickerValue>}
+          onSelect={() => openPicker({
+            title: 'Background', layout: 'grid', value: a.background,
+            choices: (Object.keys(BACKGROUNDS) as Array<keyof typeof BACKGROUNDS>).map((id) => ({ value: id, label: BACKGROUNDS[id], preview: <Background variant={id} /> })),
+            onPick: (v) => set({ background: v as keyof typeof BACKGROUNDS }),
+          })} />
         <FRow id="ap-glass" icon={Sparkles} title="Glass effects" hint="Translucent blurred panels. Turned off automatically on slow hardware." right={<Toggle on={a.glass} />} onSelect={() => set({ glass: !a.glass })} />
       </Group>
       <Group title="Motion">
-        <FRow id="ap-motion" icon={Activity} title="Animation" hint="Reduced keeps focus feedback but removes drifting backgrounds and parallax." value={{ full: 'Full', reduced: 'Reduced', off: 'Off' }[a.motion]}
-          onSelect={() => set({ motion: cycle(['full', 'reduced', 'off'] as const, a.motion) })} />
-        <FRow id="ap-perf" icon={Cpu} title="Performance" value={{ auto: 'Automatic', high: 'High quality', low: 'Low (fastest)' }[a.performance]}
-          onSelect={() => set({ performance: cycle(['auto', 'high', 'low'] as const, a.performance) })} />
+        <FRow id="ap-motion" icon={Activity} title="Animation" value={<PickerValue>{{ full: 'Full', reduced: 'Reduced', off: 'Off' }[a.motion]}</PickerValue>}
+          onSelect={() => pickList('Animation', a.motion, [
+            { value: 'full', label: 'Full', hint: 'Focus animations, drifting background and parallax.' },
+            { value: 'reduced', label: 'Reduced', hint: 'Keeps focus feedback; the background stays still.' },
+            { value: 'off', label: 'Off', hint: 'No animation at all.' },
+          ], (v) => set({ motion: v as typeof a.motion }))} />
+        <FRow id="ap-perf" icon={Cpu} title="Performance" value={<PickerValue>{{ auto: 'Automatic', high: 'High quality', low: 'Low (fastest)' }[a.performance]}</PickerValue>}
+          onSelect={() => pickList('Performance', a.performance, [
+            { value: 'auto', label: 'Automatic', hint: 'Lightweight on streaming sticks, full effects on fast hardware.' },
+            { value: 'high', label: 'High quality', hint: 'Glass blur, glows and moving background everywhere. Can stutter on sticks.' },
+            { value: 'low', label: 'Low (fastest)', hint: 'No blur or glow effects; smoothest navigation.' },
+          ], (v) => set({ performance: v as typeof a.performance }))} />
       </Group>
       <Group title="Display">
         <FRow id="ap-clock" icon={Clock} title="24-hour clock" right={<Toggle on={a.clock24h} />} onSelect={() => set({ clock24h: !a.clock24h })} />
-        <FRow id="ap-safe" icon={Monitor} title="Edge margin" hint="Increase if your TV crops the edges of the picture." value={`${a.safeArea}%`} onSelect={() => set({ safeArea: (a.safeArea + 1) % 6 })} />
+        <FRow id="ap-safe" icon={Monitor} title="Edge margin" hint="Increase if your TV crops the edges of the picture." value={<PickerValue>{a.safeArea ? `${a.safeArea}%` : 'None'}</PickerValue>}
+          onSelect={() => pickList('Edge margin', String(a.safeArea), [0, 1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: n ? `${n}%` : 'None', hint: n === 0 ? 'Use the full screen.' : undefined })),
+            (v) => set({ safeArea: Number(v) }), 'Shrinks NOIR slightly so nothing is cut off at the screen edges.')} />
       </Group>
     </>
   );
@@ -85,7 +122,9 @@ function HomeSection({ s }: { s: NoirState }) {
     <>
       <Group title="Apps">
         <FRow id="hm-arrange" icon={Grid2x2} title="Arrange apps" hint="In the App Library or on Home, hold OK on an app to move or remove it." value={`${h.favorites.length} on Home`} onSelect={() => useUI.getState().go('apps')} />
-        <FRow id="hm-focus" title="Focused app at launch" value={findApp(h.defaultFocus, s.customApps)?.name ?? '—'} onSelect={() => h.favorites.length && set({ defaultFocus: cycle(h.favorites, h.defaultFocus) })} />
+        <FRow id="hm-focus" title="Focused app at launch" value={<PickerValue>{findApp(h.defaultFocus, s.customApps)?.name ?? '—'}</PickerValue>}
+          onSelect={() => h.favorites.length && pickList('Focused app at launch', h.defaultFocus,
+            h.favorites.map((id) => ({ value: id, label: findApp(id, s.customApps)?.name ?? id })), (v) => set({ defaultFocus: v }))} />
       </Group>
       <Group title="Layout">
         <FRow id="hm-greet" title="Greeting" right={<Toggle on={h.showGreeting} />} onSelect={() => set({ showGreeting: !h.showGreeting })} />
@@ -93,7 +132,10 @@ function HomeSection({ s }: { s: NoirState }) {
         <FRow id="hm-input" title="Input widget" right={<Toggle on={h.showInputWidget} />} onSelect={() => set({ showInputWidget: !h.showInputWidget })} />
         <FRow id="hm-input-id" title="Input shown on Home"
           value={h.widgetInputId ? `${h.widgetInputId.replace('-', ' ')} · ${s.settings.inputs[h.widgetInputId]?.label ?? s.tv.inputs.find((i) => i.id === h.widgetInputId)?.systemName ?? ''}` : `Automatic (${widgetInput(s).replace('-', ' ')})`}
-          onSelect={() => inputs.length && set({ widgetInputId: cycle<string | null>([null, ...inputs], h.widgetInputId) })} />
+          onSelect={() => inputs.length && pickList('Input shown on Home', h.widgetInputId ?? 'auto', [
+            { value: 'auto', label: 'Automatic', hint: 'The first HDMI source that isn’t a soundbar.' },
+            ...inputs.map((id) => ({ value: id, label: id.replace('-', ' '), hint: s.settings.inputs[id]?.label ?? s.tv.inputs.find((i) => i.id === id)?.systemName })),
+          ], (v) => set({ widgetInputId: v === 'auto' ? null : v }))} />
       </Group>
     </>
   );
@@ -260,8 +302,11 @@ function MusicSection({ s }: { s: NoirState }) {
   return (
     <>
       <Group title="Source">
-        <FRow id="mu-src" icon={Music2} title="Music source" value={m.provider === 'demo' ? 'Demo (sample data)' : 'Spotify'}
-          onSelect={() => void patchSettings({ music: { provider: m.provider === 'demo' ? 'spotify' : 'demo' } })} />
+        <FRow id="mu-src" icon={Music2} title="Music source" value={<PickerValue>{m.provider === 'demo' ? 'Demo (sample data)' : 'Spotify'}</PickerValue>}
+          onSelect={() => pickList('Music source', m.provider, [
+            { value: 'demo', label: 'Demo', hint: 'Sample tracks; nothing actually plays.' },
+            { value: 'spotify', label: 'Spotify', hint: 'Shows and controls your Spotify playback (Premium for controls).' },
+          ], (v) => void patchSettings({ music: { provider: v as typeof m.provider } }))} />
         <FRow id="mu-art" icon={Image} title="Show album artwork" right={<Toggle on={m.showArtwork} />} onSelect={() => void patchSettings({ music: { showArtwork: !m.showArtwork } })} />
       </Group>
       <Group title="Spotify">
@@ -288,17 +333,34 @@ function AmbientSection({ s }: { s: NoirState }) {
   return (
     <>
       <Group title="Display">
-        <FRow id="am-theme" icon={MountainSnow} title="Theme" value={AMBIENT_THEMES[a.theme]} onSelect={() => set({ theme: cycle(Object.keys(AMBIENT_THEMES) as Array<keyof typeof AMBIENT_THEMES>, a.theme) })} />
-        <FRow id="am-clock" icon={Clock} title="Clock style" value={{ light: 'Light', bold: 'Bold', serif: 'Serif' }[a.clockStyle]} onSelect={() => set({ clockStyle: cycle(['light', 'bold', 'serif'] as const, a.clockStyle) })} />
+        <FRow id="am-theme" icon={MountainSnow} title="Theme" value={<PickerValue>{AMBIENT_THEMES[a.theme]}</PickerValue>}
+          onSelect={() => openPicker({
+            title: 'Ambient theme', layout: 'grid', value: a.theme,
+            choices: (Object.keys(AMBIENT_THEMES) as Array<keyof typeof AMBIENT_THEMES>).map((id) => ({
+              value: id, label: AMBIENT_THEMES[id],
+              preview: id === 'midnight' ? <Background variant="dunes" dim={0.25} /> : id === 'aurora' ? <Background variant="aurora" /> : id === 'obsidian' ? <Background variant="obsidian" dim={0.35} />
+                : id === 'minimal' ? <div className="absolute inset-0 grid place-items-center bg-black text-[2.4rem] font-extralight text-fg/90">9:41</div>
+                : <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-[#3b2a20] via-[#1b1d2a] to-[#0b0912] text-[1rem] text-fg/70">Your photos</div>,
+            })),
+            onPick: (v) => set({ theme: v as typeof a.theme }),
+          })} />
+        <FRow id="am-clock" icon={Clock} title="Clock style" value={<PickerValue>{{ light: 'Light', bold: 'Bold', serif: 'Serif' }[a.clockStyle]}</PickerValue>}
+          onSelect={() => pickList('Clock style', a.clockStyle, (['light', 'bold', 'serif'] as const).map((st) => ({
+            value: st, label: { light: 'Light', bold: 'Bold', serif: 'Serif' }[st],
+            preview: <span className="w-24 text-[2.2rem] leading-none text-fg" style={{ fontWeight: st === 'bold' ? 600 : st === 'serif' ? 400 : 200, fontFamily: st === 'serif' ? 'var(--font-serif)' : undefined }}>9:41</span>,
+          })), (v) => set({ clockStyle: v as typeof a.clockStyle }))} />
         <FRow id="am-date" title="Show date" right={<Toggle on={a.showDate} />} onSelect={() => set({ showDate: !a.showDate })} />
         <FRow id="am-music" title="Show now playing" right={<Toggle on={a.showMusic} />} onSelect={() => set({ showMusic: !a.showMusic })} />
         <FRow id="am-weather" title="Show weather" hint={s.settings.weather.latitude == null ? 'Set your location from the phone app first.' : 'Open-Meteo, refreshed every 30 minutes.'}
           right={<Toggle on={a.showWeather} />} onSelect={() => set({ showWeather: !a.showWeather })} />
-        {a.theme === 'photo' && <FRow id="am-photo" title="Photo duration" value={`${a.photoIntervalSec}s`} onSelect={() => set({ photoIntervalSec: cycle([20, 60, 300, 900], a.photoIntervalSec) })} />}
+        {a.theme === 'photo' && <FRow id="am-photo" title="Photo duration" value={<PickerValue>{a.photoIntervalSec < 60 ? `${a.photoIntervalSec} sec` : `${a.photoIntervalSec / 60} min`}</PickerValue>}
+          onSelect={() => pickList('Photo duration', String(a.photoIntervalSec), [20, 60, 300, 900].map((n) => ({ value: String(n), label: n < 60 ? `${n} seconds` : `${n / 60} minute${n === 60 ? '' : 's'}` })),
+            (v) => set({ photoIntervalSec: Number(v) }))} />}
       </Group>
       <Group title="Start">
-        <FRow id="am-idle" icon={Power} title="Start after inactivity" hint="Counts inactivity inside NOIR only; it doesn’t replace the TV’s own screensaver." value={a.idleMinutes ? `${a.idleMinutes} min` : 'Never'}
-          onSelect={() => set({ idleMinutes: cycle(idle, a.idleMinutes) })} />
+        <FRow id="am-idle" icon={Power} title="Start after inactivity" hint="Counts inactivity inside NOIR only; it doesn’t replace the TV’s own screensaver." value={<PickerValue>{a.idleMinutes ? `${a.idleMinutes} min` : 'Never'}</PickerValue>}
+          onSelect={() => pickList('Start after inactivity', String(a.idleMinutes), idle.map((n) => ({ value: String(n), label: n ? (n >= 60 ? '1 hour' : `${n} minutes`) : 'Never' })),
+            (v) => set({ idleMinutes: Number(v) }))} />
         <FRow id="am-now" icon={Sparkles} title="Start ambient now" onSelect={() => useUI.getState().go('ambient')} />
       </Group>
     </>
@@ -338,8 +400,9 @@ function SystemSection({ s }: { s: NoirState }) {
   return (
     <>
       {!standalone && <Group title="Boot into NOIR">
-        <FRow id="sy-input" icon={Monitor} title="NOIR is connected to" hint="The TV input NOIR runs on (External HDMI or Android TV mode)." value={sys.noirInputId?.replace('-', ' ') ?? 'Not set'}
-          onSelect={() => void patchSettings({ system: { noirInputId: cycle(inputs, sys.noirInputId) } })} />
+        <FRow id="sy-input" icon={Monitor} title="NOIR is connected to" hint="The TV input NOIR runs on (External HDMI or Android TV mode)." value={<PickerValue>{sys.noirInputId?.replace('-', ' ') ?? 'Not set'}</PickerValue>}
+          onSelect={() => pickList('NOIR is connected to', sys.noirInputId ?? 'none', inputs.map((id) => ({ value: id ?? 'none', label: id ? id.replace('-', ' ') : 'Not set' })),
+            (v) => void patchSettings({ system: { noirInputId: v === 'none' ? null : v } }))} />
         <FRow id="sy-auto" icon={Power} title="Switch to NOIR when the TV turns on" hint="NOIR watches the TV over Wi‑Fi and selects its input at power-on. Requires a paired TV."
           right={<Toggle on={sys.autoSwitchOnPowerOn} />} disabled={!sys.noirInputId} onSelect={() => void patchSettings({ system: { autoSwitchOnPowerOn: !sys.autoSwitchOnPowerOn } })} />
       </Group>}
@@ -395,6 +458,7 @@ export default function Settings() {
         {section === 'ambient' && <AmbientSection s={state} />}
         {section === 'system' && <SystemSection s={state} />}
       </section>
+      <PickerHost />
     </div>
   );
 }
