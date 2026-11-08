@@ -1,8 +1,8 @@
 {
-  "versionCode": 25,
-  "versionName": "0.5.14",
-  "sha256": "257350f74ec2350d2c8b377be8830c6714f72a8e48a9732f67ac104cf098e498",
-  "notes": "Start-up intro now fades smoothly into Home (no freeze or cut). Fixed NOIR occasionally crashing when you leave YouTube or Netflix.",
-  "publishedAt": "2026-11-07T08:02:31.609Z",
-  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.14.apk"
+  "versionCode": 26,
+  "versionName": "0.5.15",
+  "sha256": "06324d9461d245ecd10c62fbae49ad8e5e0282d7c3996570a8fb50837310710d",
+  "notes": "Bug fix: the TV no longer turns itself off while music is playing.",
+  "publishedAt": "2026-11-08T03:05:58.137Z",
+  "apkUrl": "https://raw.githubusercontent.com/bcrew11/noir-os/updates/noir-launcher-0.5.15.apk"
 }
