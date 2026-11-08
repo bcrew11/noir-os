@@ -17,6 +17,7 @@ export interface AndroidBridge {
   setIntroPrefs?(motion: string, sound: boolean, volume: number): void;
   wakeMediaApp?(pkg: string): boolean;
   restart?(): void;
+  keepAwake?(on: boolean): void;
   introFinished?(): boolean;
   nowPlaying(): string;
   openNotificationAccess(): boolean;

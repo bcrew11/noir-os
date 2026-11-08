@@ -224,6 +224,19 @@ export function startStandalone() {
     if (document.visibilityState === 'visible') { apps = discoverApps(); publish(); }
   });
 
+  // Keep the TV awake while music plays (released a minute after it stops, so normal sleep still works).
+  let awake = false;
+  let releaseTimer: ReturnType<typeof setTimeout> | undefined;
+  const setAwake = (on: boolean) => {
+    if (on === awake) return;
+    awake = on;
+    try { androidBridge()?.keepAwake?.(on); } catch { /* older launcher */ }
+  };
+  useNoir.subscribe((s) => {
+    if (s.state?.music.isPlaying) { clearTimeout(releaseTimer); releaseTimer = undefined; setAwake(true); }
+    else if (awake && !releaseTimer) releaseTimer = setTimeout(() => { releaseTimer = undefined; setAwake(false); }, 60_000);
+  });
+
   // Now-playing: poll the device's media session only while NOIR is visible.
   const tick = () => {
     if (document.visibilityState === 'visible') {

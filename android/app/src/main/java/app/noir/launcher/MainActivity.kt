@@ -353,6 +353,13 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun introFinished(): Boolean = introFinished || !introShown
 
+        /** While music plays, keep the device (and so the TV) from going to sleep, like a video app does. */
+        @JavascriptInterface
+        fun keepAwake(on: Boolean) = runOnUiThread {
+            if (on) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+
         /** Settings → System → Restart NOIR: a full restart (fresh process), intro included. */
         @JavascriptInterface
         fun restart() = runOnUiThread { RestartActivity.restart(this@MainActivity) }
