@@ -12,6 +12,8 @@ interface UIState {
   lastActivity: number;
   remoteSimulator: boolean;
   settingsSection: string;
+  /** Another app is in front: the interface is unmounted to free the stick's memory and CPU. */
+  asleep: boolean;
   go: (s: Screen) => void;
 }
 
@@ -22,6 +24,7 @@ export const useUI = create<UIState>((set, get) => ({
   lastActivity: Date.now(),
   remoteSimulator: false,
   settingsSection: 'appearance',
+  asleep: false,
   go: (s) => {
     const cur = get().screen;
     if (s === cur) return;

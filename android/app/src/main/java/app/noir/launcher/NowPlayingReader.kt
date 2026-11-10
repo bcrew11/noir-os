@@ -64,6 +64,9 @@ object NowPlayingReader {
         return ByteArrayOutputStream().also { src.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()
     }
 
+    /** Free cached covers (memory pressure). The current one is re-made on the next read. */
+    fun trim() { hiRes.clear(); art = null }
+
     /** Cover bytes for a served id (the page and the phone server both read through this). */
     fun artBytes(id: String): ByteArray? = art?.takeIf { it.id == id }?.bytes
 

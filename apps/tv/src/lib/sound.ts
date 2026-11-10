@@ -449,6 +449,12 @@ export function configureSound(style: SoundStyle, volume: number) {
   void prerender(style).then(loadNative);
 }
 
+/** Close the audio output while NOIR is in the background (an idle Web Audio stream still costs CPU). */
+export function setAudioActive(on: boolean) {
+  if (!ctx) return;
+  try { void (on ? ctx.resume() : ctx.suspend()); } catch { /* ignore */ }
+}
+
 /** Play a navigation sound. `volume` overrides the setting for this one sound (previews). */
 export function playSound(kind: SoundKind, style: SoundStyle = current.style, volume?: number) {
   if (style === 'off') return;

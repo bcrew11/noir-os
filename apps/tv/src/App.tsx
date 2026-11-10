@@ -10,6 +10,7 @@ import { RemoteSimulator } from './components/RemoteSimulator.tsx';
 import { FpsMeter } from './components/FpsMeter.tsx';
 import { BootIntro } from './components/BootIntro.tsx';
 import { configureSound } from './lib/sound.ts';
+import { installBackgroundHandling } from './lib/background.ts';
 import { androidBridge } from './lib/android.ts';
 import { installInput, setInputExtras } from './focus/input.ts';
 import { screenTransition, useMotion } from './hooks/useMotion.ts';
@@ -32,6 +33,7 @@ export function App() {
   const state = useNoir((s) => s.state);
   const screen = useUI((s) => s.screen);
   const sim = useUI((s) => s.remoteSimulator);
+  const asleep = useUI((s) => s.asleep);
   const motionLevel = useMotion();
   const lowPerf = usePerformanceProbe(state?.settings.appearance.performance ?? 'auto');
   useIdle();
@@ -46,6 +48,7 @@ export function App() {
 
   useEffect(() => {
     connect('tv');
+    installBackgroundHandling();
     const off = installInput();
     setInputExtras({ onPlayPause: () => void command({ type: 'music.playpause' }, { silent: true }) });
     const onKey = (e: KeyboardEvent) => {
@@ -79,6 +82,8 @@ export function App() {
     root.classList.toggle('low-perf', lowPerf);
   }, [a, motionLevel, lowPerf]);
 
+  // Another app is in front: keep only a plain backdrop (the rest of NOIR keeps running).
+  if (asleep) return <div className="absolute inset-0 bg-ink-900" />;
   if (!state) return <Splash status={status} />;
 
   const safe = state.settings.appearance.safeArea;

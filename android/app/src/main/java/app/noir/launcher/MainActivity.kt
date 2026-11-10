@@ -205,6 +205,32 @@ class MainActivity : Activity() {
         Updater.check() // at most every 6 hours
     }
 
+    // While another app (YouTube, Netflix…) is in front, NOIR gets out of its way: the page pauses
+    // what it safely can, stops pre-rendering, and puts its interface to sleep (window.__noirBackground).
+    // JavaScript keeps running, so the phone remote, lights and Saved still work.
+    override fun onStart() {
+        super.onStart()
+        if (!::web.isInitialized) return
+        web.onResume()
+        web.settings.offscreenPreRaster = true
+        web.evaluateJavascript("window.__noirBackground && window.__noirBackground(false)", null)
+    }
+
+    override fun onStop() {
+        if (::web.isInitialized) {
+            web.evaluateJavascript("window.__noirBackground && window.__noirBackground(true)", null)
+            web.settings.offscreenPreRaster = false
+            web.onPause()
+        }
+        super.onStop()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // The system is short on memory (a streaming app needs it): drop what can be rebuilt.
+        if (level >= TRIM_MEMORY_BACKGROUND || level == TRIM_MEMORY_RUNNING_LOW || level == TRIM_MEMORY_RUNNING_CRITICAL) NowPlayingReader.trim()
+    }
+
     /**
      * Lets the Govee key be set from a computer instead of typing it with the remote:
      *   adb shell am start -n app.noir.launcher/.MainActivity --es govee_key <KEY>
